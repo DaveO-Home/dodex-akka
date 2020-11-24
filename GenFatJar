@@ -1,0 +1,110 @@
+#!/usr/bin/env ./src/jin/bin/jlin 
+/*
+    This program will not run unless "jin" is installed in the "src" directory
+    Install Method 1:  cd ./src  and execute "git clone https:/github.com/DaveO-Home/jin.git"
+    Install Method 2:  browse to "https://github.com/DaveO-Home/jin" and download/extract to "src" directory
+        and rename "jin-master" to "jin"
+    Before executing, set the working directory - "export WD=."
+    It is also recommended to set the classes directory - cd to project directory and execute "export CD=${PWD}/target/classes"
+    and "mkdir target/classes"
+    To execute - cd to project directory and execute "./GenFatJar"
+    On windows(if not using WSL) execute - ".\src\jin\bin\jwin GenFatJar" - after setting WD and CD
+*/
+package jin;
+
+import java.util.Date;
+import java.util.Hashtable;
+import java.util.logging.*;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
+
+private final static Logger logger = Logger.getLogger(GenFatJar.class.getName());
+public static final String fSeparator = System.getProperty("file.separator");
+/* Use dollorSign char to avoid Jin from asking for a value */
+public final static char dollarSign = (char)0x24;
+private final static boolean isWindows = System.getProperty("os.name").startsWith("Windows") ? true : false;
+private static String sbtCommand = !isWindows? "sbt": "sbt";
+private static String extractCommand = sbtCommand + " -Ddev=false \"run conf=true\"";
+private static String assembleCommand = sbtCommand + " assembly";
+private static String removeCommand = isWindows? "del ": "rm ";
+private static String fileDest = !isWindows? "./src/main/resources/": "./src/main/resources/";
+private static String fileName = "application.json";
+private static String confName = "application.conf";
+private static String[] removeVals = { "(Config\\(SimpleConfigObject\\(\\{\"akka\":", "\\}\\)\\))" };
+
+   public void program(Hashtable h) throws Exception {
+
+	lout("");
+	lout("Location: "+GenFatJar.class.getProtectionDomain().getCodeSource().getLocation());
+	lout("");	
+
+	fileName = h.get("FILE") != null ? (String) h.get("FILE") : fileName;
+	fileDest = h.get("FILEDIR") != null ? (String) h.get("FILEDIR") : fileDest;
+
+	tout("\nExtracting Akka  Configuration.... " + extractCommand + "\n");
+	runit(extractCommand);
+    
+    // Read application.json, remove non-json content and write back to application.json
+    // Generate the Fat Jar and remove the generated application.json file
+    try {
+        String content = readFile(fileDest+fileName);
+        content = content.replaceAll(removeVals[0]+"|"+removeVals[1], "");
+        
+        writeFile(content, fileDest+fileName);
+        
+        lout("Starting Fat Jar Build - please wait...");
+        runit(assembleCommand);
+        
+        lout("Removing generated 'application.json' file");
+        runit(removeCommand+fileDest+fileName);
+        
+        lout("");
+        lout("You can now run 'Production' with: \"java -jar ./target/scala-2.13/akka-dodex-scala-assembly-1.0.jar\"");
+        lout("");
+
+    } catch (IOException ex) {
+        ex.printStackTrace();
+    }
+
+   }
+
+   private int doit(String cmd) throws Exception { return host(cmd); }
+   private void runit(String cmd) throws Exception {
+	/* silent is a Jin public variable that needs to be true to take over the output */
+	silent = true;
+	try {
+	   int rc = doit(cmd);
+	   String od = null;
+	   while((od = prn.readLine()) != null)
+	   {
+			lout(od);
+	   }
+
+	   String ed = "";
+	   while((ed = err.readLine()) != null)
+	   {
+			lout(ed);
+	   }
+	   rc = endProcess();
+	   lout("RC="+rc);
+	} catch (Exception e) { e.printStackTrace(); throw new Exception("Host Command Failed"); }
+}
+
+private static String readFile(String filePath) throws IOException {
+        String content = "";
+ 
+        content = new String (Files.readAllBytes(Paths.get(filePath)));
+ 
+        return content;
+}
+
+private static void writeFile(String content, String file) throws IOException {
+    File applicationJson = new File(file);
+    FileWriter jsonWriter = new FileWriter(applicationJson, false);
+                                
+    jsonWriter.write(content);
+    jsonWriter.close();
+}
