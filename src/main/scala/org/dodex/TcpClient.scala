@@ -49,6 +49,7 @@ object TcpClient extends App {
   implicit val system = ActorSystem("actor-system")
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global
+   @volatile var log = system.log
 
   var listener: ActorRef = null
   var client: ActorRef = null
@@ -86,7 +87,7 @@ object TcpClient extends App {
       "cleanup"
     ) { () =>
       Future {
-        println("TcpClient Terminating System")
+        log.warning("TcpClient Terminating System")
         // system.terminate()
         Done
       }
@@ -97,7 +98,7 @@ object TcpClient extends App {
       write(conf.atKey("akka").toString())
       close
     }
-    println(file + " written")
+    log.warning("{} written", file)
     system.terminate()
   } else {
     // Tcp client passes Cassandra work to listener

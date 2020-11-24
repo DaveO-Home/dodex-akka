@@ -347,9 +347,9 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       json: Json,
       cassandraSession: CassandraSession
   ): Future[Json] = {
-    println("InsertMessage Json: " + json)
     var insertPromise: Promise[Json] = Promise[Json]()
     val users: List[Object] = json.at("users").asList().asScala.toList
+    
     users.foreach {
       case user =>
         val findFuture: Future[Row] =

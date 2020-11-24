@@ -17,7 +17,7 @@
         <file>logs/TcpClient.log</file>
         <immediateFlush>false</immediateFlush>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/rolling/tcpclient_%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>logs/tcpclient_%d{yyyy-MM-dd}.log</fileNamePattern>
         </rollingPolicy>
         <encoder>
             <pattern>[%date{ISO8601}] [%level] [%logger] [%marker] [%thread] - %msg MDC: {%mdc}%n</pattern>

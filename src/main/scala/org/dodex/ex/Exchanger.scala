@@ -51,20 +51,10 @@ class Exchanger extends Actor with ActorLogging {
   private val dodexSystem =
     akka.actor.typed.ActorSystem[Capsule](DodexCassandra(), "dodex-system")
   var parent: ActorRef = null;
-  @volatile var can: Cancellable =
-    CoordinatedShutdown(system).addCancellableTask(
-      CoordinatedShutdown.PhaseBeforeServiceUnbind,
-      "cleanup"
-    ) { () =>
-      Future {
-        log.info("Cassandra Terminating Exchanger")
-        system.terminate()
-        Done
-      }
-    }
+ 
   def receive = {
     case Connected(remote: InetSocketAddress, local: InetSocketAddress) =>
-      log.error("Connected to Vertx Event Bus {}", remote)
+      log.warning("Connected to Vertx Event Bus {}", remote)
       ping(sender())
       vertxRegister(sender())
       parent = sender()
@@ -87,7 +77,7 @@ class Exchanger extends Actor with ActorLogging {
             body.at("msg")
           else null
         if (message != null) {
-          println(s"The Message: $message")
+          log.warning("Requested Command: {}", message.at("cmd").toString())
         }
         dodexSystem ! new DodexData(self, body)
       } catch {
@@ -96,7 +86,7 @@ class Exchanger extends Actor with ActorLogging {
       }
     case returnData: ReturnData =>
       var stuff: Json = null
-      println("Proto: " + proto.send("vertx", returnData.json, null).toString())
+      log.warning("Response Data Length: {}", returnData.json.toString().length())
 
       try {
         val writeBuffer = getBuffer(
@@ -113,7 +103,7 @@ class Exchanger extends Actor with ActorLogging {
     case "stop dodex"   => dodexSystem ! ShutDown
     case "write failed" => log.error("Write Failed")
     case "connection closed" =>
-      log.info("Connection Closed"); self ! "stop dodex"
+      log.warning("Connection Closed"); self ! "stop dodex"
     case "connect failed" => log.error("Connection failed"); self ! "stop dodex"
     case default @ (_: Any) =>
       log.warning(
