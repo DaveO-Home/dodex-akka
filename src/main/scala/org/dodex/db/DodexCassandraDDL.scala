@@ -5,18 +5,25 @@
 
 package org.dodex.db
 
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.util.Failure
+import scala.util.Success
+
 import akka.Done
-import akka.actor.typed.{Behavior, ActorRef, DispatcherSelector}
-import akka.actor.typed.scaladsl.{Behaviors, ActorContext, AbstractBehavior}
+import akka.actor.typed.ActorRef
+import akka.actor.typed.Behavior
+import akka.actor.typed.DispatcherSelector
+import akka.actor.typed.scaladsl.AbstractBehavior
+import akka.actor.typed.scaladsl.ActorContext
+import akka.actor.typed.scaladsl.Behaviors
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
 import com.datastax.oss.driver.api.core.CqlSession
+import com.typesafe.config.ConfigFactory
 import org.dodex.Capsule
 import org.dodex.db.DbCassandra
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Success, Failure}
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import com.typesafe.config.ConfigFactory
 
 object DodexCassandraDDL {
   val keyspace: String = "dodex"

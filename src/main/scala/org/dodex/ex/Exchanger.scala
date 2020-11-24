@@ -1,28 +1,36 @@
 package org.dodex.ex
 
-import akka.actor.{Actor, ActorRef, Props}
-import akka.actor.ActorLogging
-import akka.actor.Terminated
-import akka.actor.UnhandledMessage
-import akka.io.{IO, Tcp}
 import java.net.InetSocketAddress
-import akka.util.ByteString
-import mjson.Json
-import org.dodex.db.DodexCassandra
-import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
-import scala.concurrent.Future
-import akka.stream.scaladsl.Sink
-import scala.util.Success
-import scala.util.Failure
-import org.modellwerkstatt.javaxbus.VertXProtoMJson
 import java.nio.Buffer
 import java.nio.ByteBuffer
-import org.dodex.{Capsule, SessionCassandra, CloseSession, TcpClient}
+
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
+
+import akka.Done
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.ActorRef
 import akka.actor.Cancellable
 import akka.actor.CoordinatedShutdown
-import akka.Done
-import org.dodex.db.DodexDml
+import akka.actor.Props
+import akka.actor.Terminated
+import akka.actor.UnhandledMessage
+import akka.io.IO
+import akka.io.Tcp
+import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
+import akka.stream.scaladsl.Sink
+import akka.util.ByteString
+import mjson.Json
+import org.dodex.Capsule
+import org.dodex.CloseSession
 import org.dodex.ReturnData
+import org.dodex.SessionCassandra
+import org.dodex.TcpClient
+import org.dodex.db.DodexCassandra
+import org.dodex.db.DodexDml
+import org.modellwerkstatt.javaxbus.VertXProtoMJson
 
 case class DodexData(
     sender: akka.actor.ActorRef,
@@ -102,10 +110,11 @@ class Exchanger extends Actor with ActorLogging {
         case e: Exception =>
           e.printStackTrace()
       }
-    case "stop dodex"        => dodexSystem ! ShutDown
-    case "write failed"      => log.error("Write Failed")
-    case "connection closed" => log.info("Connection Closed"); self ! "stop dodex"
-    case "connect failed"    => log.error("Connection failed"); self ! "stop dodex"      
+    case "stop dodex"   => dodexSystem ! ShutDown
+    case "write failed" => log.error("Write Failed")
+    case "connection closed" =>
+      log.info("Connection Closed"); self ! "stop dodex"
+    case "connect failed" => log.error("Connection failed"); self ! "stop dodex"
     case default @ (_: Any) =>
       log.warning(
         "Default: {} : {} -- {}" + default.getClass.getSimpleName,
@@ -163,7 +172,7 @@ class Exchanger extends Actor with ActorLogging {
     buffer.putInt(asBytes.length)
     buffer.put(asBytes)
     buffer.limit(buffer.position())
-    val buffer2: Buffer = buffer.position(0)  // Making compatiable with java8
+    val buffer2: Buffer = buffer.position(0) // Making compatiable with java8
     buffer2.asInstanceOf[ByteBuffer]
   }
 

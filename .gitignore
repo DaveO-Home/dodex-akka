@@ -9,4 +9,5 @@ classes
 lib
 application.json
 deploy
-
+project/metals.sbt
+logs

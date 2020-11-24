@@ -1,30 +1,34 @@
 package org.dodex
 
-import akka.actor.{Actor, ActorRef, Props}
-import akka.actor.{
-  ActorSystem,
-  ActorLogging,
-  Terminated,
-  DeathPactException,
-  UnhandledMessage
-}
-import akka.io.{IO, Tcp}
-import akka.io.Tcp.Register
-import akka.util.ByteString
-import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
-import com.typesafe.config.{Config, ConfigFactory}
+import java.net.ConnectException
 import java.net.InetSocketAddress
-import org.dodex.ex.Exchanger
+import java.util.concurrent.TimeUnit
+
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
+
+import akka.Done
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.ActorRef
+import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.CoordinatedShutdown
-import akka.Done
-import scala.concurrent.Future
-import java.net.ConnectException
-import akka.util.Timeout
-import java.util.concurrent.TimeUnit
-import scala.util.Success
-import scala.util.Failure
+import akka.actor.DeathPactException
+import akka.actor.Props
+import akka.actor.Terminated
+import akka.actor.UnhandledMessage
 import akka.actor.typed.scaladsl.Behaviors
+import akka.io.IO
+import akka.io.Tcp
+import akka.io.Tcp.Register
+import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
+import akka.util.ByteString
+import akka.util.Timeout
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import org.dodex.ex.Exchanger
 
 abstract class Capsule
 case class SessionCassandra(
@@ -55,13 +59,12 @@ object TcpClient extends App {
   this.args.foreach {
     case arg =>
       val argVal = arg.split("=")
-      if(argVal.length == 2)
-        argVal(0)
-          match {
-            case "conf" => confOnly = "true" == argVal(1)
-            case "file" => file = argVal(1)
-            case _ =>
-          }
+      if (argVal.length == 2)
+        argVal(0) match {
+          case "conf" => confOnly = "true" == argVal(1)
+          case "file" => file = argVal(1)
+          case _      =>
+        }
   }
 
   val DEV: String = "true"

@@ -52,7 +52,8 @@ object CreateDML extends Enumeration {
       .raw("toUnixTimestamp(last_login) as last_login")
       .where(
         Relation.column("name").isEqualTo(bindMarker())
-      ).allowFiltering()
+      )
+      .allowFiltering()
       .build()
       .getQuery()
   )
@@ -67,7 +68,8 @@ object CreateDML extends Enumeration {
       .where(
         Relation.column("name").isEqualTo(bindMarker()),
         Relation.column("password").isEqualTo(bindMarker())
-      ).allowFiltering()
+      )
+      .allowFiltering()
       .build()
       .getQuery()
   )
@@ -75,7 +77,7 @@ object CreateDML extends Enumeration {
     deleteFrom(keyspace, "message_user")
       .where(
         Relation.column("name").isEqualTo(bindMarker()),
-        Relation.column("password").isEqualTo(bindMarker()),
+        Relation.column("password").isEqualTo(bindMarker())
         // Relation.column("message_id").isEqualTo(bindMarker())
       )
       .build()
@@ -91,7 +93,8 @@ object CreateDML extends Enumeration {
       .getQuery()
   )
   val UPDATEUSER = Value(
-    update(keyspace, "user_message").setColumn("last_login", toUnixTimestamp(now()))
+    update(keyspace, "user_message")
+      .setColumn("last_login", toUnixTimestamp(now()))
       .where(
         Relation.column("name").isEqualTo(bindMarker()),
         Relation.column("password").isEqualTo(bindMarker())
@@ -116,7 +119,7 @@ trait DbQueryBuilder {
     CreateDML.MESSAGEINSERT.toString()
   }
 
-   def getSelectUser(): String = {
+  def getSelectUser(): String = {
     CreateDML.SELECTUSER.toString()
   }
 

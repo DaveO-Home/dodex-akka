@@ -33,7 +33,7 @@ __Note;__ doDex-Akka was developed on a Windows-10 machine using the ``openSUSE-
 
 ### Operation
 
-1. Starting in Dev Mode to test implementation; execute `sbt run`
+1. Starting in Dev Mode to test implementation; execute `sbt run`. The `dodex-vertx` service should be running first, however if `dodex-akka` is started first, the Akka service will continue an attempt the TCP handshake for a limited number of trys. This can be configured in `Limits.scala`. Conversely, if `dodex-vertx` is shutdown, the Akka client will continue with attempts to reconnect a limited number of times and frequency.
 2. Starting in Dev Mode to develop; execute `sbt` to start `sbt shell`
 > * execute `set fork in run := true`, this allows the embedded `Cassandra` database to terminate when shutting down with `ctrl-c`
 > * execute `set run / javaOptions += "-Ddev=true"` for forked JVM and then execute `~run` to start

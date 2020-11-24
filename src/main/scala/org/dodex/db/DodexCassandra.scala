@@ -2,49 +2,51 @@ package org.dodex.db
 
 import java.io.File
 
-import akka.Done
-import akka.stream.ActorMaterializer
-import scala.concurrent.Future
-import akka.actor.typed.ActorSystem
-import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.AbstractBehavior
-import akka.actor.typed.scaladsl.ActorContext
-import akka.actor.typed.Signal
-import akka.actor.typed.PostStop
-import org.modellwerkstatt.javaxbus._
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import akka.persistence.cassandra.testkit.CassandraLauncher
-import akka.pattern.retry
-import mjson.Json
-
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Source, Sink}
-import scala.concurrent.duration._
-import scala.concurrent.Future
-import akka.actor.typed.scaladsl.adapter._
 import scala.concurrent.ExecutionContext
-import scala.util.Success
+import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.util.Failure
+import scala.util.Success
+
+import akka.Done
+import akka.actor.ActorRef
 import akka.actor.Cancellable
 import akka.actor.CoordinatedShutdown
-import org.dodex.util.Limits
-
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.Behavior
+import akka.actor.typed.DispatcherSelector
+import akka.actor.typed.PostStop
+import akka.actor.typed.Signal
+import akka.actor.typed.Terminated
+import akka.actor.typed.scaladsl.AbstractBehavior
+import akka.actor.typed.scaladsl.ActorContext
+import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.adapter._
+import akka.pattern.retry
+import akka.persistence.cassandra.testkit.CassandraLauncher
+import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.alpakka.cassandra.CassandraSessionSettings
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSessionRegistry
-import com.datastax.oss.driver.api.core.cql.{Row, SimpleStatement}
-import com.datastax.oss.driver.api.core.cql._
-import akka.actor.typed.DispatcherSelector
-import akka.actor.ActorRef
-import org.dodex.{SessionCassandra, Capsule, CloseSession}
-import org.dodex.db.DbCassandra
-import com.datastax.oss.driver.api.core.metadata.Metadata
+import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.Source
 import com.datastax.oss.driver.api.core.CqlSession
-import akka.actor.typed.Terminated
+import com.datastax.oss.driver.api.core.cql.Row
+import com.datastax.oss.driver.api.core.cql.SimpleStatement
+import com.datastax.oss.driver.api.core.cql._
+import com.datastax.oss.driver.api.core.metadata.Metadata
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import mjson.Json
+import org.dodex.Capsule
+import org.dodex.CloseSession
+import org.dodex.SessionCassandra
+import org.dodex.db.DbCassandra
 import org.dodex.ex.DodexData
 import org.dodex.ex.ShutDown
+import org.dodex.util.Limits
+import org.modellwerkstatt.javaxbus._
 
 case object NewSession extends Capsule
 case object StopCreate extends Capsule

@@ -1,45 +1,38 @@
 package org.dmo
 
 import java.io.File
-// import java.net.ConnectException
+import java.text.SimpleDateFormat
+import java.util.Date
+
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.language.postfixOps
+import scala.util.Failure
+import scala.util.Success
+
 import akka.Done
-// import akka.persistence.typed.PersistenceId
 import akka.actor.testkit.typed.scaladsl.LogCapturing
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import akka.stream.scaladsl.{Source, Sink}
-// import akka.pattern.StatusReply
-import org.scalatest.BeforeAndAfterEach
-import org.scalatest.wordspec.AnyWordSpecLike
+import akka.actor.typed.scaladsl.adapter._
+import akka.persistence.cassandra.testkit.CassandraLauncher
 import akka.stream.alpakka.cassandra.CassandraSessionSettings
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSessionRegistry
-// import akka.stream.alpakka.cassandra.scaladsl.CassandraSource
-import com.datastax.oss.driver.api.core.cql.{Row, SimpleStatement}
-// import akka.stream.alpakka.cassandra.CassandraWriteSettings
-// import akka.stream.alpakka.cassandra.scaladsl.CassandraFlow
-import com.datastax.oss.driver.api.core.cql._
-// import akka.actor.Cancellable
-// import akka.actor.CoordinatedShutdown
-import scala.concurrent.duration._
-import scala.concurrent.Future
+import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.Source
 import akka.testkit.TestKitBase
-import akka.persistence.cassandra.testkit.CassandraLauncher
-import scala.util.Success
-import scala.util.Failure
-import org.scalatest._
-import org.scalatest.MustMatchers._
-import akka.actor.testkit.typed.scaladsl.LogCapturing
-import scala.language.postfixOps
-import akka.actor.typed.scaladsl.adapter._
-// import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.funsuite.AsyncFunSuite
-// import org.scalatest.AsyncTestSuite
-import scala.concurrent.Await
+import com.datastax.oss.driver.api.core.cql.Row
+import com.datastax.oss.driver.api.core.cql.SimpleStatement
+import com.datastax.oss.driver.api.core.cql._
+import com.datastax.oss.driver.internal.core.cql.DefaultPreparedStatement
 import org.dodex.db.DbCassandra
 import org.dodex.db.DbQueryBuilder
-import com.datastax.oss.driver.internal.core.cql.DefaultPreparedStatement
-import java.util.Date
-import java.text.SimpleDateFormat
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.MustMatchers._
+import org.scalatest._
+import org.scalatest.funsuite.AsyncFunSuite
+import org.scalatest.wordspec.AnyWordSpecLike
 
 class CassandraSpec
     extends ScalaTestWithActorTestKit
@@ -88,7 +81,6 @@ class CassandraDodex
     super.afterAll()
   }
 
-  // test 2
   test("cassandra version is at least 3") {
     Await.result(version, 5.seconds)
     version.onComplete {
@@ -254,8 +246,8 @@ class CassandraDodex
           .boundStatementBuilder()
           .setString("name", name)
           .setString("pass", pass)
-          .setString("mess", mess)
-          .setString("hand", hand)
+          .setString("message", mess)
+          .setString("fromhand", hand)
           .build()
 
         doInsert = cassandraSession.executeWrite(insertMessage)
@@ -344,4 +336,3 @@ class CassandraDodex
     future
   }
 }
-

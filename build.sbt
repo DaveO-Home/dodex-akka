@@ -29,7 +29,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-tools" % AkkaVersion,
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "org.sharegov" % "mjson" % "1.4.1",
-  "com.typesafe.akka" %% "akka-actor-testkit-typed" % "2.6.9" % Test,
+  "com.typesafe.akka" %% "akka-actor-testkit-typed" % "2.6.10" % Test,
   // "org.scalatest" %% "scalatest" % "3.3.0-SNAP2" % Test
   // "org.scalatest" %% "scalatest" % "3.2.2" % Test
   "com.datastax.oss" % "java-driver-query-builder" % "4.3.1",

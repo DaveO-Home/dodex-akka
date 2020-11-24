@@ -1,9 +1,10 @@
 package org.dodex.db
 
 import scala.util.control.Breaks._
-import com.datastax.oss.driver.api.querybuilder.SchemaBuilder._
-import com.datastax.oss.driver.api.querybuilder.QueryBuilder._
+
 import com.datastax.oss.driver.api.core.cql._
+import com.datastax.oss.driver.api.querybuilder.QueryBuilder._
+import com.datastax.oss.driver.api.querybuilder.SchemaBuilder._
 
 object CreateTable extends Enumeration {
   var keyspace = "dodex"

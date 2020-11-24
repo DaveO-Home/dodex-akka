@@ -4,30 +4,30 @@
 
 package org.dodex.db
 
-import akka.Done
-import akka.actor.typed.{Behavior, ActorRef, DispatcherSelector}
-import akka.actor.typed.scaladsl.{Behaviors, ActorContext, AbstractBehavior}
-import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
-import com.datastax.oss.driver.api.core.CqlSession
-import org.dodex.Capsule
-import org.dodex.db.DbCassandra
-import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.{Success, Failure}
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import org.dodex.db.DbQueryBuilder
-import com.datastax.oss.driver.api.core.cql.PreparedStatement
-import com.datastax.oss.driver.api.core.cql.BoundStatement
-import mjson.Json
-import akka.util.ByteString
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
-import java.text.SimpleDateFormat
-import akka.stream.scaladsl.Sink
-import com.datastax.oss.driver.api.core.cql.Row
-import org.dodex.ReturnData
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
+import scala.util.Failure
+import scala.util.Success
+
+import akka.Done
+import akka.actor.typed.ActorRef
+import akka.actor.typed.Behavior
+import akka.actor.typed.scaladsl.AbstractBehavior
+import akka.actor.typed.scaladsl.ActorContext
+import akka.actor.typed.scaladsl.Behaviors
+import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
+import akka.stream.scaladsl.Sink
+import com.datastax.oss.driver.api.core.cql.BoundStatement
+import com.datastax.oss.driver.api.core.cql.PreparedStatement
+import com.datastax.oss.driver.api.core.cql.Row
+import mjson.Json
+import org.dodex.Capsule
+import org.dodex.ReturnData
+import org.dodex.db.DbQueryBuilder
 
 object DodexCassandraDML {
   import mjson.Json._;
@@ -361,7 +361,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
               val insertMessage: String = getMessageInsert()
               var future: Future[PreparedStatement] =
                 cassandraSession.prepare(insertMessage)
-              
+
               future.onComplete {
                 case Success(pstmt) =>
                   var insertMessage: BoundStatement = pstmt
