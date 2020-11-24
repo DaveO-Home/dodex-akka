@@ -1,0 +1,12 @@
+target
+.bloop
+.metals
+.scalafmt.conf
+project/project
+src/jin
+*.log
+classes
+lib
+application.json
+deploy
+
