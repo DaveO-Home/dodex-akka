@@ -87,7 +87,7 @@ object TcpClient extends App {
       "cleanup"
     ) { () =>
       Future {
-        log.warning("TcpClient Terminating System")
+        println("TcpClient Terminating System")
         // system.terminate()
         Done
       }
