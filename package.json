@@ -1,6 +1,6 @@
 {
   "name": "dodex-akka",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A scala asynchronous server for Dodex and Dodex-mess",
   "main": "index.js",
   "scripts": {

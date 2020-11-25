@@ -16,44 +16,53 @@ __Note;__ doDex-Akka was developed on a Windows-10 machine using the ``openSUSE-
 ## Getting Started
 
 1. ```npm install dodex-akka``` or `git clone`/download from <https://github.com/DaveO-Home/dodex-akka>. If you use npm install, move node_modules/dodex-akka to an appropriate directory.
-2. Edit `src/main/resources/application.conf` and change the following;
->    * modify `cassandra-service` host values to reflect a networked Cassandra
->    * modify `event.bus.dev.host` to reflect the location of the development Vertx micro-service
->    * modify `event.bus.host` to reflect the location of the production Vertx micro-service
->    * also change the `port` values if test and production are running on the same machine simultaneously. Make sure the `bridge.port` value in `application-conf.json` for the Vertx micro-service corresponds to these values.
+
+2. Edit ```src/main/resources/application.conf``` and change the following;
+    * modify ```cassandra-service``` host values to reflect a networked Cassandra
+    * modify ``event.bus.dev.host`` to reflect the location of the development Vertx micro-service
+    * modify ```event.bus.host``` to reflect the location of the production Vertx micro-service
+    * also change the ```port``` values if test and production are running on the same machine simultaneously. Make sure the ```bridge.port``` value in ```application-conf.json``` for the Vertx micro-service corresponds to these values.
 
 3. ```cd <install directory>/dodex-akka``` and execute ```sbt run```. This should install Scala dependencies and startup the micro-service in development mode against the default embedded Cassandra database. Review instructions below on Akka development.
-4. On the Vertx side, make sure dodex-vertx is running with `Cassandra` database set.
->    * Method 1; `export DEFAULT_DB=cassandra` or `Set DEFAULT_DB=cassandra` before starting the `Dodex-Vertx` micro-service.
->    * Method 2; change `defaultdb` to `cassandra` in `database_config.json` file before starting vertx. 
 
-5. With both Vertx and Akka sevices running, execute url ```http://localhost:8087/test``` in a browser. To test that the `Akka` service is working, follow instructions for `Dodex-Mess`. If the message box displays `connected` you are good to go. __Note;__ The Vertx service is started with `Cassandra` if the startup message `TCP Event Bus Bridge Started` is displayed.
+4. On the Vertx side, make sure dodex-vertx is running with ```Cassandra``` database set.
+    * Method 1; ```export DEFAULT_DB=cassandra``` or ```Set DEFAULT_DB=cassandra``` before starting the ```Dodex-Vertx``` micro-service.
+    * Method 2; change ```defaultdb``` to ```cassandra``` in ```database_config.json``` file before starting vertx. 
+
+5. With both Vertx and Akka sevices running, execute url ```http://localhost:8087/test``` in a browser. To test that the ```Akka``` service is working, follow instructions for ```Dodex-Mess```. If the message box displays ```connected``` you are good to go. __Note;__ The Vertx service is started with ```Cassandra``` if the startup message ```TCP Event Bus Bridge Started``` is displayed.
 6. You can also run ```http://localhost:8087/test/bootstrap.html``` for a bootstrap example.
 7. Follow instructions for dodex at <https://www.npmjs.com/package/dodex-mess> and <https://www.npmjs.com/package/dodex-input>.
 
 ### Operation
 
 1. Starting in Dev Mode to test implementation; execute `sbt run`. The `dodex-vertx` service should be running first, however if `dodex-akka` is started first, the Akka service will continue an attempt the TCP handshake for a limited number of trys. This can be configured in `Limits.scala`. Conversely, if `dodex-vertx` is shutdown, the Akka client will continue with attempts to reconnect a limited number of times and frequency.
+
 2. Starting in Dev Mode to develop; execute `sbt` to start `sbt shell`
-> * execute `set fork in run := true`, this allows the embedded `Cassandra` database to terminate when shutting down with `ctrl-c`
-> * execute `set run / javaOptions += "-Ddev=true"` for forked JVM and then execute `~run` to start
-> * modify some `Akka` code and execute `ctrl-c`, while still in the `sbt shell` and using `~run` the `Akka` service will restart.
+    * execute `set fork in run := true`, this allows the embedded `Cassandra` database to terminate when shutting down with `ctrl-c`
+    * execute `set run / javaOptions += "-Ddev=true"` for forked JVM and then execute `~run` to start
+    * modify some `Akka` code and execute `ctrl-c`, while still in the `sbt shell` and using `~run` the `Akka` service will restart.
 
 3. Building a Production distribution - Review the `sbt` plugin documentation for details
-> * Try `sbt stage` this will build a production setup without packaging.  You can execute by running `target/universal/stage/bin/akka-dodex-scala`. Make sure your production database is running.
-> * Execute `sbt universal:packageBin` to package the application. It can then be moved to a proper machine/directory for extraction and execution. The generated package is `target/universal/akka-dodex-scala-1.0.zip`.
-> * Building a fat jar using the `assembly` plugin requires a hack for an `Akka` application. Basically the plugin cannot determine the full `Akka` configuration.
->   1. Using a Java based package @ <https://github.com/DaveO-Home/jin> to generate the `Fat Jar`
->   2. Jin must be installed in the `src` directory. The simplist method is to `cd src` and execute `git clone https://github.com/DaveO-Home/jin.git`.
->   3. In the project directory where `GenFatJar` is located, execute `export WD=.`, `export CD=${PWD}/target/classes` and `mkdir target/classes`.
->   4. Execute `./GenFatJar` to build the Fat Jar.
->   5. The generated jar should be `target/scala-2.13/akka-dodex-scala-assembly-1.0.jar`.
->   6. Execute `java -jar target/scala-2.13/akka-dodex-scala-assembly-1.0.jar` to startup production.
+    * Try `sbt stage` this will build a production setup without packaging.  You can execute by running `target/universal/stage/bin/akka-dodex-scala`. Make sure your production database is running.
+    * Execute `sbt universal:packageBin` to package the application. It can then be moved to a proper machine/directory for extraction and execution. The generated package is `target/universal/akka-dodex-scala-1.0.zip`.
+    * Building a fat jar using the `assembly` plugin requires a hack for an `Akka` application. Basically the plugin cannot determine the full `Akka` configuration.
+
+        1. Using a Java based package @ <https://github.com/DaveO-Home/jin> to generate the `Fat Jar`
+      
+        2. Jin must be installed in the `src` directory. The simplist method is to `cd src` and execute `git clone https://github.com/DaveO-Home/jin.git`.
+
+        3. In the project directory where `GenFatJar` is located, execute `export WD=.`, `export CD=${PWD}/target/classes` and `mkdir target/classes`.
+      
+        4. Execute `./GenFatJar` to build the Fat Jar.
+
+        5. The generated jar should be `target/scala-2.13/akka-dodex-scala-assembly-1.0.jar`.
+
+        6. Execute `java -jar target/scala-2.13/akka-dodex-scala-assembly-1.0.jar` to startup production.
 
 ## Cassandra
 
-> * If `cqlsh` is installed, to access the local embedded database while `dodex-akka` is runnig, this might be useful - `cqlsh 127.0.0.1 --cqlversion=3.4.4 --encoding=utf8`.
-> * For a `Cassandra 4` setup this might be useful - `cqlsh <production host> 9042 --cqlversion="3.4.5"`.
+  * If `cqlsh` is installed, to access the local embedded database while `dodex-akka` is runnig, this might be useful - `cqlsh 127.0.0.1 --cqlversion=3.4.4 --encoding=utf8`.
+  * For a `Cassandra 4` setup this might be useful - `cqlsh <production host> 9042 --cqlversion="3.4.5"`.
 
 ## Test Dodex
 
