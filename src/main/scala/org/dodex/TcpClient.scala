@@ -152,6 +152,7 @@ class Client(
   var shuttingDown: Boolean = false
   // Connect to Vertx
   IO(Tcp) ! Connect(remote)
+  
   // Tcp.SO.KeepAlive(true)
 
   def receive = {
@@ -159,7 +160,7 @@ class Client(
       // listener ! "connect failed"
       if (!shuttingDown) {
         shuttingDown = true
-        restartTcpOnFailure()
+        restartTcpOnFailure(remote)
       }
 
     case c @ Connected(remote, local) =>
@@ -189,7 +190,7 @@ class Client(
             shuttingDown = true
             listener ! "connection closed"
             listener ! "stop dodex"
-            restartTcpOnFailure()
+            restartTcpOnFailure(remote)
           }
 
         case default @ (_: Any) =>
@@ -201,15 +202,14 @@ class Client(
       }
   }
 
-  def futureToAttempt() = {
+  def futureToAttempt(remote: InetSocketAddress) = {
     if (failCount < Limits.connectLimit) {
       failCount += 1
       try {
         println("FailCount=" + failCount)
         TcpClient.stopTcpClient()
-
         system.actorOf(
-          Client.props(new InetSocketAddress("192.168.1.66", 7032), handler),
+          Client.props(new InetSocketAddress(remote.getAddress().toString().substring(1), remote.getPort()), handler),
           "client" + failCount
         )
         failCount = connectLimit
@@ -244,9 +244,9 @@ class Client(
   }
 
   // Doing this for Development - when vertx goes down the client may reconnect
-  def restartTcpOnFailure() = {
+  def restartTcpOnFailure(remote: InetSocketAddress) = {
     val retried = retry(
-      () => futureToAttempt(),
+      () => futureToAttempt(remote),
       attempts = Limits.connectLimit,
       Limits.interval milliseconds
     )

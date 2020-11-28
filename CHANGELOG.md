@@ -1,6 +1,14 @@
 # Changelog
 
-## [v1.0.0](https://github.com/DaveO-Home/dodex-akka/tree/v1.0.0) (2020-11-29)
+## [v1.0.2](https://github.com/DaveO-Home/dodex-akka/tree/v1.0.2) (2020-11-28)
+
+[Full Changelog](https://github.com/DaveO-Home/dodex-akka/compare/v1.0.0...v1.0.2)
+
+* Fixed hard-coded inet-address(remote) for restart
+* Some README changes
+* Code Clean-up
+
+## [v1.0.0](https://github.com/DaveO-Home/dodex-akka/tree/v1.0.0) (2020-11-24)
 
 [Full Changelog](https://github.com/DaveO-Home/dodex-akka/compare/v1.0.0...v1.0.0)
 

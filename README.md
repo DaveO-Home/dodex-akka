@@ -15,27 +15,27 @@ __Note;__ doDex-Akka was developed on a Windows-10 machine using the ``openSUSE-
 
 ## Getting Started
 
-1. ```npm install dodex-akka``` or `git clone`/download from <https://github.com/DaveO-Home/dodex-akka>. If you use npm install, move node_modules/dodex-akka to an appropriate directory.
+1. `npm install dodex-akka` or `git clone`/download from <https://github.com/DaveO-Home/dodex-akka>. If you use npm install, move node_modules/dodex-akka to an appropriate directory.
 
-2. Edit ```src/main/resources/application.conf``` and change the following;
-    * modify ```cassandra-service``` host values to reflect a networked Cassandra
+2. Edit `src/main/resources/application.conf` and change the following;
+    * modify `cassandra-service` host values to reflect a networked Cassandra
     * modify ``event.bus.dev.host`` to reflect the location of the development Vertx micro-service
-    * modify ```event.bus.host``` to reflect the location of the production Vertx micro-service
-    * also change the ```port``` values if test and production are running on the same machine simultaneously. Make sure the ```bridge.port``` value in ```application-conf.json``` for the Vertx micro-service corresponds to these values.
+    * modify `event.bus.host` to reflect the location of the production Vertx micro-service
+    * also change the `port` values if test and production are running on the same machine simultaneously. Make sure the `bridge.port` value in `application-conf.json` for the Vertx micro-service corresponds to these values.
 
-3. ```cd <install directory>/dodex-akka``` and execute ```sbt run```. This should install Scala dependencies and startup the micro-service in development mode against the default embedded Cassandra database. Review instructions below on Akka development.
+3. `cd <install directory>/dodex-akka` and execute `sbt run`. This should install Scala dependencies and startup the micro-service in development mode against the default embedded Cassandra database. Review instructions below on Akka development.
 
-4. On the Vertx side, make sure dodex-vertx is running with ```Cassandra``` database set.
-    * Method 1; ```export DEFAULT_DB=cassandra``` or ```Set DEFAULT_DB=cassandra``` before starting the ```Dodex-Vertx``` micro-service.
-    * Method 2; change ```defaultdb``` to ```cassandra``` in ```database_config.json``` file before starting vertx. 
+4. On the Vertx side, make sure dodex-vertx is running with `Cassandra` database set.
+    * Method 1; `export DEFAULT_DB=cassandra` or `Set DEFAULT_DB=cassandra` before starting the `Dodex-Vertx` micro-service.
+    * Method 2; change `defaultdb` to `cassandra` in `database_config.json` file before starting vertx. 
 
-5. With both Vertx and Akka sevices running, execute url ```http://localhost:8087/test``` in a browser. To test that the ```Akka``` service is working, follow instructions for ```Dodex-Mess```. If the message box displays ```connected``` you are good to go. __Note;__ The Vertx service is started with ```Cassandra``` if the startup message ```TCP Event Bus Bridge Started``` is displayed.
-6. You can also run ```http://localhost:8087/test/bootstrap.html``` for a bootstrap example.
+5. With both Vertx and Akka sevices running, execute url `http://localhost:8087/test` in a browser. To test that the `Akka` service is working, follow instructions for `Dodex-Mess`. If the message box displays `connected` you are good to go. __Note;__ The Vertx service is started with `Cassandra` if the startup message `TCP Event Bus Bridge Started` is displayed.
+6. You can also run `http://localhost:8087/test/bootstrap.html` for a bootstrap example.
 7. Follow instructions for dodex at <https://www.npmjs.com/package/dodex-mess> and <https://www.npmjs.com/package/dodex-input>.
 
 ### Operation
 
-1. Starting in Dev Mode to test implementation; execute `sbt run`. The `dodex-vertx` service should be running first, however if `dodex-akka` is started first, the Akka service will continue an attempt the TCP handshake for a limited number of trys. This can be configured in `Limits.scala`. Conversely, if `dodex-vertx` is shutdown, the Akka client will continue with attempts to reconnect a limited number of times and frequency.
+1. Starting in Dev Mode to test implementation; execute `sbt run`. The `dodex-vertx` service should be running first, however if `dodex-akka` is started first, the Akka service will continue attempting the TCP handshake for a limited number of trys. This can be configured in `Limits.scala`. Conversely, if `dodex-vertx` is shutdown, the Akka client will continue with attempts to reconnect a limited number of times, frequency can also be configured.
 
 2. Starting in Dev Mode to develop; execute `sbt` to start `sbt shell`
     * execute `set fork in run := true`, this allows the embedded `Cassandra` database to terminate when shutting down with `ctrl-c`
@@ -77,6 +77,8 @@ __Note;__ doDex-Akka was developed on a Windows-10 machine using the ``openSUSE-
 ### Optimizing with Graalvm
 
 * See <https://www.scala-sbt.org/sbt-native-packager/formats/graalvm-native-image.html> to implement.
+
+__Note;__ This worked with GraalVM Version 20.1.0 (Java Version 11.0.7)
 
 ### Single Page React Application to demo Development and Integration Testing
 

@@ -85,7 +85,6 @@ class Exchanger extends Actor with ActorLogging {
           e.printStackTrace()
       }
     case returnData: ReturnData =>
-      var stuff: Json = null
       log.warning("Response Data Length: {}", returnData.json.toString().length())
 
       try {
