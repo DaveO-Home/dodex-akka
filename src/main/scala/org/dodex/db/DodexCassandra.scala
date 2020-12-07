@@ -125,7 +125,7 @@ object DodexCassandra {
               context.self ! CloseSession
               Behaviors.stopped
             case default @ (_: Any) =>
-              println("Default: " + default.getClass.getSimpleName)
+              context.log.warn("Default: " + default.getClass.getSimpleName)
           }
           Behaviors.same
         }

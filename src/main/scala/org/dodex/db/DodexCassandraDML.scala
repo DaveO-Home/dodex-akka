@@ -4,6 +4,8 @@
 
 package org.dodex.db
 
+import java.time.Instant
+
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -45,9 +47,8 @@ object DodexCassandraDML {
           case DodexDml(sender, json, cassandraSession) =>
             if (json == null || json.at("msg") == null) {
               // Send noop
-              println("noop")
+              context.log.info("noop")
             } else {
-              // val vertxJson: Json = Json.read(json.at("msg").asString())
               val vertxJson: Json = json.at("msg")
               vertxJson.at("cmd").asString() match {
                 case "selectuser" =>
@@ -122,6 +123,48 @@ object DodexCassandraDML {
                       json
                         .set("cmd", vertxJson.at("cmd").asString())
                         .set("ws", vertxJson.at("ws").asString())
+                      sender ! new ReturnData(json)
+                    case Failure(exe) =>
+                      throw new Exception(exe)
+                  }
+                case "getlogin" =>
+                  val login: Future[Json] =
+                    dodexCassandraDML.getLogin(
+                      vertxJson,
+                      cassandraSession
+                    )
+                  login.onComplete {
+                    case Success(json) =>
+                      json
+                        .set("cmd", vertxJson.at("cmd").asString())
+                      sender ! new ReturnData(json)
+                    case Failure(exe) =>
+                      throw new Exception(exe)
+                  }
+                case "addlogin" =>
+                  val login: Future[Json] =
+                    dodexCassandraDML.addLogin(
+                      vertxJson,
+                      cassandraSession
+                    )
+                  login.onComplete {
+                    case Success(json) =>
+                      json
+                        .set("cmd", vertxJson.at("cmd").asString())
+                      sender ! new ReturnData(json)
+                    case Failure(exe) =>
+                      throw new Exception(exe)
+                  }
+                case "removelogin" =>
+                  val login: Future[Json] =
+                    dodexCassandraDML.removeLogin(
+                      vertxJson,
+                      cassandraSession
+                    )
+                  login.onComplete {
+                    case Success(json) =>
+                      json
+                        .set("cmd", vertxJson.at("cmd").asString())
                       sender ! new ReturnData(json)
                     case Failure(exe) =>
                       throw new Exception(exe)
@@ -349,7 +392,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
   ): Future[Json] = {
     var insertPromise: Promise[Json] = Promise[Json]()
     val users: List[Object] = json.at("users").asList().asScala.toList
-    
+
     users.foreach {
       case user =>
         val findFuture: Future[Row] =
@@ -463,6 +506,137 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       case Failure(exe) =>
         deletePromise completeWith Future {
           Json.`object`.set("msg", Json.`object`.set("deleted", -1))
+        }
+        throw new Exception(exe)
+    }
+
+    deletePromise.future
+  }
+
+  def getLogin(
+      json: mjson.Json,
+      cassandraSession: CassandraSession
+  ): Future[mjson.Json] = {
+    val jsonPayLoad: mjson.Json = Json.`object`;
+    val getLogin: String = getDodexLogin()
+    val loginPromise: Promise[Json] = Promise[Json]()
+    var login: Future[Row] = cassandraSession
+      .select(
+        getLogin,
+        json.at("name").asString(),
+        json.at("password").asString()
+      )
+      .runWith(Sink.head)
+
+    login.onComplete {
+      case Success(row) =>
+        val loginJson = Json.`object`()
+
+        loginJson.set("name", row.getString("name"))
+        loginJson.set("password", row.getString("password"))
+        loginJson.set("login_id", row.getUuid("login_id").toString())
+        loginJson.set("last_login", row.getLong("last_login"))
+        loginJson.set("status", "0")
+        jsonPayLoad.set("msg", loginJson.getValue())
+
+        loginPromise completeWith Future { jsonPayLoad }
+
+      case Failure(exe) =>
+        val loginJson = Json.`object`()
+
+        loginJson.set("name", json.at("name"))
+        loginJson.set("password", json.at("password"))
+        loginJson.set("login_id", "0")
+        loginJson.set("last_login", -1L)
+        loginJson.set("status", "-1")
+        jsonPayLoad.set("msg", loginJson.getValue())
+
+        loginPromise completeWith Future { jsonPayLoad }
+    }
+    loginPromise.future
+  }
+
+  def addLogin(
+      json: mjson.Json,
+      cassandraSession: CassandraSession
+  ): Future[mjson.Json] = {
+    var insertPromise: Promise[Json] = Promise[mjson.Json]()
+    val insertLogin: String = getInsertLogin()
+
+    var future: Future[PreparedStatement] =
+      cassandraSession.prepare(insertLogin)
+
+    future.onComplete {
+      case Success(pstmt) =>
+        var insertLogin: BoundStatement = pstmt
+          .boundStatementBuilder()
+          .setString("name", json.at("name").asString())
+          .setString("pass", json.at("password").asString())
+          .build()
+
+        val doInsert: Future[Done] =
+          cassandraSession.executeWrite(insertLogin)
+
+        doInsert.onComplete {
+          case Success(result) =>
+            getLogin(
+              json,
+              cassandraSession
+            ).onComplete {
+              case Success(result) => {
+                result.set("status", "0")
+                insertPromise completeWith Future { result }
+              }
+              case Failure(exe) =>
+                json.set("status", "-4")
+                insertPromise completeWith Future { json }
+            }
+          case Failure(exe) =>
+            json.set("status", "-4")
+            insertPromise completeWith Future { json }
+        }
+      case Failure(exe) =>
+        throw new Exception(exe)
+    }
+
+    insertPromise.future
+  }
+
+  def removeLogin(
+      json: mjson.Json,
+      cassandraSession: CassandraSession
+  ): Future[mjson.Json] = {
+    val deleteLogin: String = getRemoveLogin()
+    val deletePromise: Promise[Json] = Promise[Json]()
+    var futureDelete: Future[Done] = cassandraSession
+      .executeWrite(
+        deleteLogin,
+        json.at("name").asString(),
+        json.at("password").asString()
+      )
+
+    futureDelete.onComplete {
+      case Success(Done) =>
+        deletePromise completeWith Future {
+          Json.`object`.set(
+            "msg",
+            json
+              .set("deleted", 1)
+              .set("status", "0")
+              .set("last_login", Instant.now().getEpochSecond())
+              .getValue()
+          )
+        }
+      case Failure(exe) =>
+        deletePromise completeWith Future {
+          Json.`object`.set(
+            "msg",
+            json
+              .set("deleted", 0)
+              .set("status", "-4")
+              .set("last_login", Instant.now().getEpochSecond())
+              .getValue()
+          )
         }
         throw new Exception(exe)
     }

@@ -58,7 +58,7 @@ class CassandraDodex
 
   override def beforeAll(): Unit = {
     val databaseDirectory = new File("target/cassandra-test-db")
-    var port: Int = 9042; // Seems to work with only 9042
+    var port: Int = 9048;
     var clean: Boolean = true
 
     CassandraLauncher.start(

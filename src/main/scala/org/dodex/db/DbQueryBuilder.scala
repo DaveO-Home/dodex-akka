@@ -108,7 +108,39 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
+  val GETLOGIN = Value(
+    selectFrom(keyspace, "login")
+      .column("login_Id")
+      .column("name")
+      .column("password")
+      .raw("toUnixTimestamp(last_login) as last_login")
+      .where(
+        Relation.column("name").isEqualTo(bindMarker()),
+        Relation.column("password").isEqualTo(bindMarker())
+      )
+      .build()
+      .getQuery()
+  )
+  val LOGININSERT = Value(
+    insertInto(keyspace, "login")
+      .value("login_id", now())
+      .value("name", bindMarker("name"))
+      .value("password", bindMarker("pass"))
+      .value("last_login", toTimestamp(now()))
+      .build()
+      .getQuery()
+  )
+  val REMOVELOGIN = Value(
+    deleteFrom(keyspace, "login")
+      .where(
+        Relation.column("name").isEqualTo(bindMarker()),
+        Relation.column("password").isEqualTo(bindMarker())
+      )
+      .build()
+      .getQuery()
+  )
 }
+
 
 trait DbQueryBuilder {
   def getUserInsert(): String = {
@@ -149,5 +181,17 @@ trait DbQueryBuilder {
 
   def setKeyspace(keyspace: String) = {
     CreateDML.keyspace = keyspace;
+  }
+
+  def getDodexLogin(): String = {
+    CreateDML.GETLOGIN.toString()
+  }
+
+  def getInsertLogin(): String = {
+    CreateDML.LOGININSERT.toString()
+  }
+
+  def getRemoveLogin(): String = {
+    CreateDML.REMOVELOGIN.toString()
   }
 }

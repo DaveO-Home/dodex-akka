@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.1.0](https://github.com/DaveO-Home/dodex-akka/tree/v1.1.0) (2020-12-06)
+
+[Full Changelog](https://github.com/DaveO-Home/dodex-akka/compare/v1.0.2...v1.1.0)
+
+* Added Cassandra database to SPA React demo application
+* See documentation for React setup and development & production for Cassandra issues @ <https://github.com/DaveO-Home/dodex-vertx/blob/master/src/spa-react/README.md> and `Single Page React Application` section in the `Akka` README.
+
 ## [v1.0.2](https://github.com/DaveO-Home/dodex-akka/tree/v1.0.2) (2020-11-28)
 
 [Full Changelog](https://github.com/DaveO-Home/dodex-akka/compare/v1.0.0...v1.0.2)

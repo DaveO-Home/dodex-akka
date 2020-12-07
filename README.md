@@ -82,7 +82,8 @@ __Note;__ This worked with GraalVM Version 20.1.0 (Java Version 11.0.7)
 
 ### Single Page React Application to demo Development and Integration Testing
 
-* Not yet implemented for `Cassandra`
+* For details see <https://github.com/DaveO-Home/dodex-vertx/blob/master/src/spa-react/README.md>
+* After setting the database to `cassandra`, co-ordination among `Akka`, `Vertx` and `React` builds is difficult to automate. Therefore using `gulp test` and `gulp prod` will not work. For a test build use `gulp rebuild` and once `Vertx` and `Akka` are restarted, tests can be executed with `gulp acceptance`. For the `React` production build, use `gulp prd`.
 
 ### Additional References
 
