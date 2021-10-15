@@ -72,14 +72,22 @@ class Exchanger extends Actor with ActorLogging {
         val jsonString = data.takeRight(length).utf8String
         val vertxJson: Json = Json.read(jsonString)
         val body: Json = vertxJson.at("body")
+
         val message: mjson.Json =
-          if (body != null && body.at("msg") != null)
-            body.at("msg")
+          if (body != null)
+            if (body.at("msg") != null)
+              body.at("msg")
+            else 
+              body
           else null
+
         if (message != null) {
           log.warning("Requested Command: {}", message.at("cmd").toString())
         }
-        dodexSystem ! new DodexData(self, body)
+        // make json object compatiable with dodex-vertx
+        val payload: Json =  if (body != null && body.at("msg") == null) 
+          Json.`object`().set("msg", body) else body
+        dodexSystem ! new DodexData(self, payload)
       } catch {
         case e: Exception =>
           e.printStackTrace()

@@ -4,11 +4,12 @@ version := "1.0"
 
 scalaVersion := "2.13.3"
 val AkkaVersion = "2.6.10"
-val AkkaPersistenceCassandraVersion = "1.0.3"
+val AkkaPersistenceCassandraVersion = "1.0.5"
 val AkkaHttpVersion = "10.1.12"
-val AkkaProjectionVersion = "0.3"
+val AkkaProjectionVersion = "1.1.0"
 lazy val akkaVersion = "2.6.10"
 
+// dependencyOverrides ++= Seq(
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % AkkaVersion,
   "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion,
@@ -47,19 +48,23 @@ initialize ~= { _ =>
 scalacOptions := Seq("-unchecked", "-deprecation")
 enablePlugins(JavaAppPackaging, GraalVMNativeImagePlugin)
 
-mainClass in (Compile, run) := Some("org.dodex.TcpClient")
-mainClass in (Compile, packageBin) := Some("org.dodex.TcpClient")
+Compile / run / mainClass := Some("org.dodex.TcpClient") 
+Compile / packageBin / mainClass := Some("org.dodex.TcpClient") 
 
 // If using with "scala" e.g.  "scala akka-dodex-scala-assembly-1.0.jar"
-// assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
-assemblyMergeStrategy in assembly := {   
+assembly / assemblyOption := (assembly / assemblyOption).value.copy(includeScala = false)
+assembly / assemblyMergeStrategy := {   
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard   
-  case x => MergeStrategy.first
   case "reference.conf" => MergeStrategy.concat
+  // case x => MergeStrategy.first
+  case x =>
+    val oldStrategy = (assembly / assemblyMergeStrategy).value
+    oldStrategy(x)
 }
-mainClass in assembly := Some("org.dodex.TcpClient")
-logLevel in assembly := Level.Error
-test in assembly := {}
+
+assembly / mainClass := Some("org.dodex.TcpClient")
+assembly / logLevel := Level.Error
+assembly / test := {}
 
 maintainer := "daveo@dodex.org"
 

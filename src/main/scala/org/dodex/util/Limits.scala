@@ -7,5 +7,5 @@ object Limits {
     val connectLimit: Int = 10
     val hourLimit: Int = 360
     val dayLimit: Int = 288
-    val interval: Int = 5000
+    val interval: Int = 10000
 }

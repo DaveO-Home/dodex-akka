@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.1.1](https://github.com/DaveO-Home/dodex-akka/tree/v1.1.1) (2021-10-06)
+
+[Full Changelog](https://github.com/DaveO-Home/dodex-akka/compare/v1.1.0...v1.1.1)
+
+* Upgraded `sbt` to `1.5.5`
+* Modified `Exchanger.scala` to handle JsonObject from Quarkus. Dodex-Vertx still uses `mjson.Json`.
+
 ## [v1.1.0](https://github.com/DaveO-Home/dodex-akka/tree/v1.1.0) (2020-12-06)
 
 [Full Changelog](https://github.com/DaveO-Home/dodex-akka/compare/v1.0.2...v1.1.0)
