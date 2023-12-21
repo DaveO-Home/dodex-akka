@@ -27,7 +27,6 @@ import org.dodex.Capsule
 import org.dodex.CloseSession
 import org.dodex.ReturnData
 import org.dodex.SessionCassandra
-import org.dodex.TcpClient
 import org.dodex.db.DodexCassandra
 import org.dodex.db.DodexDml
 import org.modellwerkstatt.javaxbus.VertXProtoMJson
@@ -52,7 +51,7 @@ class Exchanger extends Actor with ActorLogging {
     akka.actor.typed.ActorSystem[Capsule](DodexCassandra(), "dodex-system")
   var parent: ActorRef = null;
  
-  def receive = {
+  def receive: PartialFunction[Any,Unit] = {
     case Connected(remote: InetSocketAddress, local: InetSocketAddress) =>
       log.warning("Connected to Vertx Event Bus {}", remote)
       ping(sender())
@@ -107,6 +106,10 @@ class Exchanger extends Actor with ActorLogging {
         case e: Exception =>
           e.printStackTrace()
       }
+    case "close" =>
+      var writeBuffer =
+        getBuffer(proto.unregister("akka").toString().getBytes("UTF-8"))
+      sender() ! ByteString.fromByteBuffer(writeBuffer)
     case "stop dodex"   => dodexSystem ! ShutDown
     case "write failed" => log.error("Write Failed")
     case "connection closed" =>
@@ -172,10 +175,10 @@ class Exchanger extends Actor with ActorLogging {
     val buffer2: Buffer = buffer.position(0) // Making compatiable with java8
     buffer2.asInstanceOf[ByteBuffer]
   }
-
   override def unhandled(message: Any): Unit = {
     message match {
-      case Terminated(dead) => throw DeathPactException(dead)
+      case Terminated(dead) =>
+        dead.tell("Terminated", self)
       case _ =>
         context.system.eventStream.publish(
           UnhandledMessage(message, sender(), self)

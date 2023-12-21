@@ -89,7 +89,7 @@ class DodexCassandraDDL[Capsule](context: ActorContext[Capsule])
     with DbCassandra {
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global
-  implicit val system = akka.actor.ActorSystem()
+  val system: akka.actor.ActorSystem = akka.actor.ActorSystem()
   var log = system.log
 
   def setupKeyspace(

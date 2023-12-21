@@ -10,14 +10,14 @@ object CreateTable extends Enumeration {
   var keyspace = "dodex"
   var keyspaceSql: String = null;
 
-  val CREATEKEYSPACE = Value(
+  val CREATEKEYSPACE: Value = Value(
     createKeyspace(keyspace)
       .ifNotExists()
       .withSimpleStrategy(1)
       .build()
       .getQuery()
   )
-  val CREATEUSERS = Value(
+  val CREATEUSERS: Value = Value(
     createTable(keyspace, "user_message")
       .ifNotExists()
       .withPartitionKey(
@@ -41,7 +41,7 @@ object CreateTable extends Enumeration {
       .build()
       .getQuery()
   )
-  val CREATEMESSAGES = Value(
+  val CREATEMESSAGES: Value = Value(
     createTable(keyspace, "message_user")
       .ifNotExists()
       .withPartitionKey(
@@ -76,7 +76,7 @@ object CreateTable extends Enumeration {
       .build()
       .getQuery()
   )
-  val CREATELOGIN = Value(
+  val CREATELOGIN: Value = Value(
     createTable(keyspace, "login")
       .ifNotExists()
       .withPartitionKey(

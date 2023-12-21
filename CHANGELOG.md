@@ -1,5 +1,15 @@
 # Changelog
 
+## [v2.0.0](https://github.com/DaveO-Home/dodex-akka/tree/v2.0.0) (2023-12-21)
+
+[Full Changelog](https://github.com/DaveO-Home/dodex-akka/compare/v1.1.1...v2.0.0)
+
+* Upgraded all components: __Akka__, __Sbt__, __Scala__, __Java__, __Cassandra__
+* Removed embedded Cassandra, must now use a networked Cassandra 4+
+* Added script to create a Docker test Cassandra - __cassDocker.sh__
+* Added script to run the Uber Jar. With updated versions, a jar is missing. Used `sbt stage` to obtain the jar - __runUber.sh__.  
+  (NoClassDefFoundError: scala/collection/immutable/Seq found in org.scala-lang.scala-library-2.13.10.jar)
+
 ## [v1.1.1](https://github.com/DaveO-Home/dodex-akka/tree/v1.1.1) (2021-10-06)
 
 [Full Changelog](https://github.com/DaveO-Home/dodex-akka/compare/v1.1.0...v1.1.1)

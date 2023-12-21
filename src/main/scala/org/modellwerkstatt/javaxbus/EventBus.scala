@@ -4,7 +4,7 @@
  * <daniel.stieger@modellwerkstatt.org>
  *
  *
- * VertX 3 EventBus client in plain java. This is the public API of this eventbus client.
+ * VertX 4 EventBus client in plain java. This is the public API of this eventbus client.
  *
  */
 
@@ -86,7 +86,7 @@ class EventBus {
   def isConnected(): Boolean = {
     if (com == null) {
       // was not initialiized or maybe already closed...
-      false
+      return false
     }
     com.isConnected()
   }

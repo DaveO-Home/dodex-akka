@@ -85,5 +85,6 @@ class Message(@BeanProperty var address: String,
     "[Message " + payLoad + "]"
   }
 
+  // def getAddress(): String = address
 }
 

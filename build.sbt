@@ -1,40 +1,41 @@
 name := "akka-dodex-scala"
 
-version := "1.0"
+version := "2.0"
 
-scalaVersion := "2.13.3"
-val AkkaVersion = "2.6.10"
-val AkkaPersistenceCassandraVersion = "1.0.5"
-val AkkaHttpVersion = "10.1.12"
+scalaVersion := "3.3.1"
+
+val AkkaVersion = "2.9.0-M2"
+val AkkaPersistenceCassandraVersion = "1.1.1"
+val AkkaHttpVersion = "10.5.3"
 val AkkaProjectionVersion = "1.1.0"
-lazy val akkaVersion = "2.6.10"
+lazy val akkaVersion = "2.9.0-M2"
 
-// dependencyOverrides ++= Seq(
+dependencyOverrides ++= Seq()
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-sharding-typed" % AkkaVersion,
   "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion,
   "com.typesafe.akka" %% "akka-http" % AkkaHttpVersion,
   "com.typesafe.akka" %% "akka-protobuf-v3" % AkkaVersion,
   "com.typesafe.akka" %% "akka-stream" % AkkaVersion,
+  "com.typesafe.akka" %% "akka-actor" % AkkaVersion,
   "com.typesafe.akka" %% "akka-http-spray-json" % AkkaHttpVersion,
   "com.typesafe.akka" %% "akka-persistence-typed" % AkkaVersion,
   "com.typesafe.akka" %% "akka-persistence-query" % AkkaVersion,
-  "com.typesafe.akka" %% "akka-serialization-jackson" % AkkaVersion,
   "com.typesafe.akka" %% "akka-discovery" % AkkaVersion,
-  "com.typesafe.akka" %% "akka-persistence-cassandra" % AkkaPersistenceCassandraVersion,
   "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % AkkaPersistenceCassandraVersion,
-  "com.lightbend.akka" %% "akka-projection-eventsourced" % AkkaProjectionVersion,
-  "com.lightbend.akka" %% "akka-projection-cassandra" % AkkaProjectionVersion,
-  "com.lightbend.akka" %% "akka-stream-alpakka-cassandra" % "2.0.2",
-  "org.scala-lang" % "scala-library" % "2.13.3",
   "com.typesafe.akka" %% "akka-cluster-tools" % AkkaVersion,
+  "com.typesafe.akka" %% "akka-actor-testkit-typed" % AkkaVersion % Test,
+  "com.lightbend.akka" %% "akka-projection-cassandra" % "1.5.0-M4",
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "org.sharegov" % "mjson" % "1.4.1",
-  "com.typesafe.akka" %% "akka-actor-testkit-typed" % "2.6.10" % Test,
-  // "org.scalatest" %% "scalatest" % "3.3.0-SNAP2" % Test
-  // "org.scalatest" %% "scalatest" % "3.2.2" % Test
-  "com.datastax.oss" % "java-driver-query-builder" % "4.3.1",
-  "org.scalatest" %% "scalatest" % "3.1.4" % Test
+  "com.datastax.oss" % "java-driver-query-builder" % "4.17.0",
+  "org.scalatest" %% "scalatest" % "3.3.0-SNAP4" % Test
+
+// Libraries for the Github Embedded Cassandra
+//  "com.github.nosan" % "embedded-cassandra" % "4.0.7"
+//  "org.apache.commons" % "commons-compress" % "1.21" % Compile,
+//  "org.yaml" % "snakeyaml" % "1.30" % Compile,
+//  "org.slf4j" % "slf4j-api" % "1.7.36" % Compile
 )
 
 unmanagedSources / excludeFilter := "Json.java"
@@ -48,9 +49,13 @@ initialize ~= { _ =>
 scalacOptions := Seq("-unchecked", "-deprecation")
 enablePlugins(JavaAppPackaging, GraalVMNativeImagePlugin)
 
-Compile / run / mainClass := Some("org.dodex.TcpClient") 
-Compile / packageBin / mainClass := Some("org.dodex.TcpClient") 
+Compile / run / mainClass := Some("org.dodex.TcpClientMain") 
+Compile / packageBin / mainClass := Some("org.dodex.TcpClientMain") 
 
+assemblyMergeStrategy in assembly := {   
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard   
+  case x => MergeStrategy.first 
+}
 // If using with "scala" e.g.  "scala akka-dodex-scala-assembly-1.0.jar"
 assembly / assemblyOption := (assembly / assemblyOption).value.copy(includeScala = false)
 assembly / assemblyMergeStrategy := {   
@@ -62,7 +67,8 @@ assembly / assemblyMergeStrategy := {
     oldStrategy(x)
 }
 
-assembly / mainClass := Some("org.dodex.TcpClient")
+
+assembly / mainClass := Some("org.dodex.TcpClientMain")
 assembly / logLevel := Level.Error
 assembly / test := {}
 

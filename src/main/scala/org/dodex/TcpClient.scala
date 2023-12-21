@@ -1,13 +1,5 @@
 package org.dodex
 
-import java.net.ConnectException
-import java.net.InetSocketAddress
-import java.util.concurrent.TimeUnit
-
-import scala.concurrent.Future
-import scala.util.Failure
-import scala.util.Success
-
 import akka.Done
 import akka.actor.Actor
 import akka.actor.ActorLogging
@@ -15,7 +7,7 @@ import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.CoordinatedShutdown
-import akka.actor.DeathPactException
+import akka.actor.typed.DeathPactException
 import akka.actor.Props
 import akka.actor.Terminated
 import akka.actor.UnhandledMessage
@@ -29,6 +21,17 @@ import akka.util.Timeout
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import org.dodex.ex.Exchanger
+
+import java.net.ConnectException
+import java.net.InetSocketAddress
+import java.util.concurrent.TimeUnit
+
+import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.concurrent.duration.DurationInt
+import scala.util.Failure
+import scala.util.Success
+import scala.collection.immutable.Seq
 
 abstract class Capsule
 case class SessionCassandra(
@@ -45,84 +48,97 @@ case class ReturnData(
 ) extends Capsule
 case object CloseSession extends Capsule
 
-object TcpClient extends App {
-  implicit val system = ActorSystem("actor-system")
-  implicit val ec: scala.concurrent.ExecutionContext =
-    scala.concurrent.ExecutionContext.global
-   @volatile var log = system.log
-
+object TcpClient {
+  val system = ActorSystem("actor-system")
   var listener: ActorRef = null
   var client: ActorRef = null
-  // val argsIn: Array[String] = this.args
   var confOnly = false
   var file = "./src/main/resources/application.json"
+  val waitFor = Promise[Null]()
 
-  this.args.foreach {
-    case arg =>
-      val argVal = arg.split("=")
-      if (argVal.length == 2)
-        argVal(0) match {
-          case "conf" => confOnly = "true" == argVal(1)
-          case "file" => file = argVal(1)
-          case _      =>
-        }
+  @main
+  def TcpClientMain(args: String*) = {
+    if (args != null) {
+      for arg <- args do {
+        val argVal = arg.split("=")
+        if (argVal.length == 2)
+          argVal(0) match {
+            case "conf" => confOnly = "true" == argVal(1)
+            case "file" => file = argVal(1)
+            case _      =>
+          }
+      }
+      waitFor completeWith Future { null }
+    }
   }
 
-  val DEV: String = "true"
-  val conf: Config = ConfigFactory.load()
+  implicit val ec: scala.concurrent.ExecutionContext =
+    scala.concurrent.ExecutionContext.global
+  @volatile var log = system.log
 
-  // dev is set to true in "sbt.build", for Metals debugging see launch.json
-  val dev: String = conf.getString("dev")
-  val host: String =
-    if (DEV == dev) conf.getString("event.bus.dev.host")
-    else conf.getString("event.bus.host")
-  val port: Int =
-    if (DEV == dev) conf.getInt("event.bus.dev.port")
-    else conf.getInt("event.bus.port")
+  waitFor.future.onComplete {
+    case Success(result) => {
+      val DEV: String = "true"
+      val conf: Config = ConfigFactory.load()
 
-  @volatile var can: Cancellable =
-    CoordinatedShutdown(system).addCancellableTask(
-      // CoordinatedShutdown.PhaseBeforeActorSystemTerminate,
-      CoordinatedShutdown.PhaseBeforeServiceUnbind,
-      "cleanup"
-    ) { () =>
-      Future {
-        println("TcpClient Terminating System")
-        // system.terminate()
-        Done
+      // dev is set to true in "sbt.build", for Metals debugging see launch.json
+      val dev: String = conf.getString("dev")
+      val host: String =
+        if (DEV == dev) conf.getString("event.bus.dev.host")
+        else conf.getString("event.bus.host")
+      val port: Int =
+        if (DEV == dev) conf.getInt("event.bus.dev.port")
+        else conf.getInt("event.bus.port")
+
+      @volatile var can: Cancellable = null
+
+      can = CoordinatedShutdown(system).addCancellableTask(
+        // CoordinatedShutdown.PhaseBeforeActorSystemTerminate,
+        CoordinatedShutdown.PhaseBeforeServiceUnbind,
+        "close"
+      ) { () =>
+        Future {
+          println("TcpClient Terminating System")
+          can.cancel() // do only once
+          Done
+        }
+      }
+      // Only saving the configuration for the "assembly" task (fat jar)
+      if (confOnly) {
+        new java.io.PrintWriter(file) {
+          write(conf.atKey("akka").toString())
+          close
+        }
+        system.terminate()
+        log.warning("{} written", file)
+      } else {
+        // Tcp client passes Cassandra work to listener
+        listener = system.actorOf(Props[Exchanger](), "listener")
+
+        // Startup the Tcp Client
+        client = system.actorOf(
+          Client.props(new InetSocketAddress(host, port), listener),
+          "client"
+        )
       }
     }
-  // Only saving the configuration for the "assembly" task (fat jar)
-  if (confOnly) {
-    new java.io.PrintWriter(file) {
-      write(conf.atKey("akka").toString())
-      close
+    case Failure(err) => {
+      val msg = err.getMessage()
+      println("TcpClient startup failed: " + msg)
     }
-    log.warning("{} written", file)
-    system.terminate()
-  } else {
-    // Tcp client passes Cassandra work to listener
-    listener = system.actorOf(Props[Exchanger](), "listener")
-
-    // Startup the Tcp Client
-    client = system.actorOf(
-      Client.props(new InetSocketAddress(host, port), listener),
-      "client"
-    )
   }
 
   def stopTcpClient(): Unit = {
     system.stop(client)
     Behaviors.stopped
   }
-
 }
 
 object Client {
   def props(
       remote: InetSocketAddress,
       replies: ActorRef
-  ) =
+  ): Props =
     Props(classOf[Client], remote, replies)
 }
 
@@ -152,10 +168,10 @@ class Client(
   var shuttingDown: Boolean = false
   // Connect to Vertx
   IO(Tcp) ! Connect(remote)
-  
+
   // Tcp.SO.KeepAlive(true)
 
-  def receive = {
+  def receive: PartialFunction[Any, Unit] = {
     case CommandFailed(_: Connect) =>
       // listener ! "connect failed"
       if (!shuttingDown) {
@@ -202,14 +218,22 @@ class Client(
       }
   }
 
-  def futureToAttempt(remote: InetSocketAddress) = {
+  def futureToAttempt(remote: InetSocketAddress): Future[Int] = {
     if (failCount < Limits.connectLimit) {
       failCount += 1
       try {
         println("FailCount=" + failCount)
+
         TcpClient.stopTcpClient()
+        // TcpClientDodex.TcpClient().stopTcpClient()
         system.actorOf(
-          Client.props(new InetSocketAddress(remote.getAddress().toString().substring(1), remote.getPort()), handler),
+          Client.props(
+            new InetSocketAddress(
+              remote.getAddress().toString().substring(1),
+              remote.getPort()
+            ),
+            handler
+          ),
           "client" + failCount
         )
         failCount = connectLimit
@@ -244,7 +268,7 @@ class Client(
   }
 
   // Doing this for Development - when vertx goes down the client may reconnect
-  def restartTcpOnFailure(remote: InetSocketAddress) = {
+  def restartTcpOnFailure(remote: InetSocketAddress): Unit = {
     val retried = retry(
       () => futureToAttempt(remote),
       attempts = Limits.connectLimit,
@@ -255,7 +279,7 @@ class Client(
   override def unhandled(message: Any): Unit = {
     message match {
       case Terminated(dead) =>
-        throw DeathPactException(dead)
+        dead.tell("Terminated", self)
       case _ =>
         context.system.eventStream.publish(
           UnhandledMessage(message, sender(), self)

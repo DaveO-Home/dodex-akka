@@ -22,6 +22,7 @@ import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
+import akka.stream.alpakka.cassandra.scaladsl.CassandraSource
 import akka.stream.scaladsl.Sink
 import com.datastax.oss.driver.api.core.cql.BoundStatement
 import com.datastax.oss.driver.api.core.cql.PreparedStatement
@@ -35,7 +36,7 @@ object DodexCassandraDML {
   import mjson.Json._;
 
   val keyspace: String = "dodex"
-
+  
   def apply(): Behavior[Capsule] =
     Behaviors.setup[Capsule](context => {
       implicit val ec: scala.concurrent.ExecutionContext =
@@ -184,7 +185,9 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
     with DbQueryBuilder {
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global
-  implicit val system = akka.actor.ActorSystem()
+  // val materializer =  akka.stream.Materializer.matFromSystem(
+  //     /* missing */summon[akka.actor.ClassicActorSystemProvider])
+  val system: akka.actor.ActorSystem = akka.actor.ActorSystem()
   var log = system.log
 
   def selectUser(
@@ -229,30 +232,35 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
     val jsonPayLoad: mjson.Json = Json.`object`;
     val selectUser: String = getSelectUser()
     val userPromise: Promise[Json] = Promise[Json]()
-    var users: Future[Seq[Row]] = cassandraSession
+    implicit val system = akka.actor.ActorSystem()
+//    var users: Future[Seq[Row]] = CassandraSource(getSelectUser(),
+//      json.at("name").asString(), json.at("password").asString())
+//      .runWith(Sink.seq)
+    var users: Future[Row] = cassandraSession
       .select(
         selectUser,
         json.at("name").asString(),
         json.at("password").asString()
       )
-      .runWith(Sink.seq)
+      .map(row=>row)
+      .runWith(Sink.head[Row])
 
     users.onComplete {
       case Success(data) =>
         val userJson = Json.`object`
-        data.foreach {
-          case row =>
-            userJson.set("name", row.getString("name"))
-            userJson.set("password", row.getString("password"))
-            userJson.set("user_id", row.getUuid("user_id").toString())
-            userJson.set("ip", row.getString("ip"))
-            userJson.set("last_login", row.getLong("last_login"))
+            userJson.set("name", data.getString("name"))
+            userJson.set("password", data.getString("password"))
+            userJson.set("user_id", data.getUuid("user_id").toString())
+            userJson.set("ip", data.getString("ip"))
+            userJson.set("last_login", data.getLong("last_login"))
 
             jsonPayLoad.set("msg", userJson.getValue())
-        }
         userPromise completeWith Future { jsonPayLoad }
       case Failure(exe) =>
-        throw new Exception(exe)
+//        throw new Exception(exe)
+        userPromise completeWith Future {
+          jsonPayLoad
+        }
     }
     userPromise.future
   }
@@ -261,6 +269,8 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       user: String,
       cassandraSession: CassandraSession
   ): Future[Row] = {
+//    implicit val materializer = context.classicActorContext.system
+    implicit val system = akka.actor.ActorSystem()
     val selectUserByName: String = getSelectUserByName()
     var row: Future[Row] = cassandraSession
       .select(
@@ -353,6 +363,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       json: mjson.Json,
       cassandraSession: CassandraSession
   ): Future[mjson.Json] = {
+    implicit val system = akka.actor.ActorSystem()
     var usersPromise: Promise[Json] = Promise[Json]()
     val jsonPayLoad: mjson.Json = Json.`object`;
     val selectAllUsers: String = getSelectAllUsers()
@@ -447,6 +458,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       json: mjson.Json,
       cassandraSession: CassandraSession
   ): Future[mjson.Json] = {
+    implicit val system = akka.actor.ActorSystem()
     val jsonPayLoad: mjson.Json = Json.`object`;
     val undeliveredMess: String = getSelectUndelivered()
     val userPromise: Promise[Json] = Promise[Json]()
@@ -517,6 +529,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       json: mjson.Json,
       cassandraSession: CassandraSession
   ): Future[mjson.Json] = {
+    implicit val system = akka.actor.ActorSystem()
     val jsonPayLoad: mjson.Json = Json.`object`;
     val getLogin: String = getDodexLogin()
     val loginPromise: Promise[Json] = Promise[Json]()

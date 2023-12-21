@@ -144,12 +144,12 @@ object DodexCassandra {
       var port: Int = 9042;
       var clean: Boolean = false
 
-      CassandraLauncher.start(
-        databaseDirectory,
-        CassandraLauncher.DefaultTestConfigResource,
-        clean = clean,
-        port = port
-      )
+//      CassandraLauncher.start(
+//        databaseDirectory,
+//        CassandraLauncher.DefaultTestConfigResource,
+//        clean = clean,
+//        port = port
+//      )
     }
   }
 }
@@ -158,7 +158,7 @@ class DodexCassandra(context: ActorContext[Capsule])
     extends AbstractBehavior[Capsule](context) {
   import scala.language.postfixOps
 
-  implicit val system = akka.actor.ActorSystem()
+  val system: akka.actor.ActorSystem = akka.actor.ActorSystem()
   // val log = org.slf4j.LoggerFactory.getLogger("logging.service")
   // @volatile var log = context.log
   var log = system.log
@@ -174,7 +174,7 @@ class DodexCassandra(context: ActorContext[Capsule])
   var connectLimit: Int = Limits.connectLimit // 3
   var hourLimit: Int = 360
   var dayLimit: Int = 288
-  val conf = ConfigFactory.load()
+  val conf: Config = ConfigFactory.load()
   var dev: String = conf.getString("dev")
 
   @volatile var failCount = 0
@@ -193,7 +193,7 @@ class DodexCassandra(context: ActorContext[Capsule])
 
   def initCassandra(): CassandraSession = {
     var sessionSettings: CassandraSessionSettings = null
-
+    dev = "prod"
     if (DEV.equals(dev)) {
       sessionSettings = CassandraSessionSettings(
         "dodex-dev-with-akka-discovery"

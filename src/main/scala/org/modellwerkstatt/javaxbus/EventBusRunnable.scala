@@ -194,13 +194,13 @@ class EventBusRunnable extends Runnable {
       } else if ("message" == msgType) {
         if (upNRunning) {
           val msgToSend: Message = proto.prepareMessageToDeliver(msgType, msg)
-          dispatchMessage(msgToSend.getAddress(), msgToSend)
+          dispatchMessage(msgToSend.address, msgToSend)
         }
       } else if ("err" == msgType) {
         // is there an address set?
         if (upNRunning && msg.has("address")) {
           val msgToSend: Message = proto.prepareMessageToDeliver(msgType, msg)
-          dispatchMessage(msgToSend.getAddress(), msgToSend)
+          dispatchMessage(msgToSend.address, msgToSend)
         } else {
           val msgToSend: Message = proto.prepareMessageToDeliver(msgType, msg)
           // call error Handler

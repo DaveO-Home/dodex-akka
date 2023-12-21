@@ -7,7 +7,7 @@ import com.datastax.oss.driver.api.querybuilder.relation.Relation
 object CreateDML extends Enumeration {
   var keyspace = "dodex"
 
-  val USERINSERT = Value(
+  val USERINSERT: Value = Value(
     insertInto(keyspace, "user_message")
       .value("user_id", now())
       .value("name", bindMarker("name"))
@@ -17,7 +17,7 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
-  val MESSAGEINSERT = Value(
+  val MESSAGEINSERT: Value = Value(
     insertInto(keyspace, "message_user")
       .value("message_Id", now())
       .value("name", bindMarker("name"))
@@ -29,7 +29,7 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
-  val SELECTUSER = Value(
+  val SELECTUSER: Value = Value(
     selectFrom(keyspace, "user_message")
       .column("user_Id")
       .column("name")
@@ -43,7 +43,7 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
-  val SELECTUSERBYNAME = Value(
+  val SELECTUSERBYNAME: Value = Value(
     selectFrom(keyspace, "user_message")
       .column("user_Id")
       .column("name")
@@ -57,7 +57,7 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
-  val SELECTUNDELIVERED = Value(
+  val SELECTUNDELIVERED: Value = Value(
     selectFrom(keyspace, "message_user")
       .column("message_Id")
       .column("name")
@@ -73,7 +73,7 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
-  val DELETEDELIVERED = Value(
+  val DELETEDELIVERED: Value = Value(
     deleteFrom(keyspace, "message_user")
       .where(
         Relation.column("name").isEqualTo(bindMarker()),
@@ -83,7 +83,7 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
-  val DELETEUSER = Value(
+  val DELETEUSER: Value = Value(
     deleteFrom(keyspace, "user_message")
       .where(
         Relation.column("name").isEqualTo(bindMarker()),
@@ -92,7 +92,7 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
-  val UPDATEUSER = Value(
+  val UPDATEUSER: Value = Value(
     update(keyspace, "user_message")
       .setColumn("last_login", toUnixTimestamp(now()))
       .where(
@@ -102,13 +102,13 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
-  val SELECTALLUSERS = Value(
+  val SELECTALLUSERS: Value = Value(
     selectFrom(keyspace, "user_message")
       .column("name")
       .build()
       .getQuery()
   )
-  val GETLOGIN = Value(
+  val GETLOGIN: Value = Value(
     selectFrom(keyspace, "login")
       .column("login_Id")
       .column("name")
@@ -121,7 +121,7 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
-  val LOGININSERT = Value(
+  val LOGININSERT: Value = Value(
     insertInto(keyspace, "login")
       .value("login_id", now())
       .value("name", bindMarker("name"))
@@ -130,7 +130,7 @@ object CreateDML extends Enumeration {
       .build()
       .getQuery()
   )
-  val REMOVELOGIN = Value(
+  val REMOVELOGIN: Value = Value(
     deleteFrom(keyspace, "login")
       .where(
         Relation.column("name").isEqualTo(bindMarker()),
@@ -179,7 +179,7 @@ trait DbQueryBuilder {
     CreateDML.SELECTUSERBYNAME.toString()
   }
 
-  def setKeyspace(keyspace: String) = {
+  def setKeyspace(keyspace: String): Unit = {
     CreateDML.keyspace = keyspace;
   }
 
