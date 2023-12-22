@@ -49,7 +49,7 @@ class Exchanger extends Actor with ActorLogging {
     scala.concurrent.ExecutionContext.global
   private val dodexSystem =
     akka.actor.typed.ActorSystem[Capsule](DodexCassandra(), "dodex-system")
-  var parent: ActorRef = null;
+  var parent: ActorRef = null
  
   def receive: PartialFunction[Any,Unit] = {
     case Connected(remote: InetSocketAddress, local: InetSocketAddress) =>
@@ -83,10 +83,10 @@ class Exchanger extends Actor with ActorLogging {
         if (message != null) {
           log.warning("Requested Command: {}", message.at("cmd").toString())
         }
-        // make json object compatiable with dodex-vertx
+        // make json object compatible with dodex-vertx
         val payload: Json =  if (body != null && body.at("msg") == null) 
           Json.`object`().set("msg", body) else body
-        dodexSystem ! new DodexData(self, payload)
+        dodexSystem ! DodexData(self, payload)
       } catch {
         case e: Exception =>
           e.printStackTrace()
@@ -128,14 +128,14 @@ class Exchanger extends Actor with ActorLogging {
     sender ! ByteString.fromByteBuffer(writeBuffer)
   }
 
-  def vertxRegister(sender: ActorRef): Unit = {
+  private def vertxRegister(sender: ActorRef): Unit = {
     var writeBuffer =
       getBuffer(proto.register("akka").toString().getBytes("UTF-8"))
 
     // Messaging (Akka service registration to Vertx Event Bus) back to Client for Tcp writing
     sender ! ByteString.fromByteBuffer(writeBuffer)
 
-    var jsonPayLoad: Json =
+    val jsonPayLoad: Json =
       Json.`object`().set("msg", "Akka Cassandra Ready").set("cmd", "string");
     writeBuffer = getBuffer(
       proto.send("vertx", jsonPayLoad, null).toString().getBytes("UTF-8")
@@ -144,11 +144,11 @@ class Exchanger extends Actor with ActorLogging {
     sender ! ByteString.fromByteBuffer(writeBuffer)
   }
 
-  def startupCassandra(): Unit = {
+  private def startupCassandra(): Unit = {
     dodexSystem ! new SessionCassandra(self, null)
   }
 
-  def cassandraData(sessionCassandra: SessionCassandra): Unit = {
+  private def cassandraData(sessionCassandra: SessionCassandra): Unit = {
     val version: Future[String] =
       sessionCassandra.cassandraSession
         .select("SELECT release_version FROM system.local;")
@@ -159,20 +159,19 @@ class Exchanger extends Actor with ActorLogging {
       case Success(result) => {
         log.warning(s"The Cassandra Version: $result")
       }
-      case Failure(exe) => {
-        val msg = exe.getMessage()
+      case Failure(exe) =>
+        val msg = exe.getMessage
         log.error("Cassandra query failed: {}", msg)
-      }
     }
   }
 
-  def getBuffer(asBytes: Array[Byte]): ByteBuffer = {
+  private def getBuffer(asBytes: Array[Byte]): ByteBuffer = {
     val buffer: ByteBuffer = ByteBuffer.allocate(asBytes.length + 4)
 
     buffer.putInt(asBytes.length)
     buffer.put(asBytes)
     buffer.limit(buffer.position())
-    val buffer2: Buffer = buffer.position(0) // Making compatiable with java8
+    val buffer2: Buffer = buffer.position(0) // Making compatible with java8
     buffer2.asInstanceOf[ByteBuffer]
   }
   override def unhandled(message: Any): Unit = {

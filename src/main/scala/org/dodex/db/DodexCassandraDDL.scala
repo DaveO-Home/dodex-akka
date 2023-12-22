@@ -114,7 +114,7 @@ class DodexCassandraDDL[Capsule](context: ActorContext[Capsule])
         log.info(s"The Cassandra Keyspace: $keySpace")
         createdFuture = createTables(cassandraSession, cqlSession, keySpace)
       case Failure(exe) =>
-        val msg = exe.getMessage()
+        val msg = exe.getMessage
         log.error(s"The Cassandra Keyspace Failure: $msg")
         cassandraSession.close(ec)
         throw new Exception(exe)
@@ -150,7 +150,7 @@ class DodexCassandraDDL[Capsule](context: ActorContext[Capsule])
     isPresent
   }
 
-  def isTablePresent(
+  private def isTablePresent(
       keySpace: String,
       table: String,
       cqlSession: CqlSession

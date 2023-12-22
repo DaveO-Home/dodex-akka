@@ -8,7 +8,7 @@ import com.datastax.oss.driver.api.querybuilder.SchemaBuilder._
 
 object CreateTable extends Enumeration {
   var keyspace = "dodex"
-  var keyspaceSql: String = null;
+  var keyspaceSql: Option[String] = None
 
   val CREATEKEYSPACE: Value = Value(
     createKeyspace(keyspace)
@@ -118,7 +118,7 @@ trait DbCassandra {
             .contains(CreateTable.keyspace + "." + createValue)
         ) {
           isSql = true
-          sql = sqlCmd.toString()
+          sql = sqlCmd.toString
           break()
         }
         isSql
@@ -128,6 +128,6 @@ trait DbCassandra {
   }
 
   def getCreateKeyspace(): String = {
-    CreateTable.CREATEKEYSPACE.toString()
+    CreateTable.CREATEKEYSPACE.toString
   }
 }

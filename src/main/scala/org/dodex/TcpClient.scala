@@ -54,10 +54,10 @@ object TcpClient {
   var client: ActorRef = null
   var confOnly = false
   var file = "./src/main/resources/application.json"
-  val waitFor = Promise[Null]()
+  val waitFor: Promise[Null] = Promise[Null]()
 
   @main
-  def TcpClientMain(args: String*) = {
+  def TcpClientMain(args: String*): Any = {
     if (args != null) {
       for arg <- args do {
         val argVal = arg.split("=")
@@ -77,7 +77,7 @@ object TcpClient {
   @volatile var log = system.log
 
   waitFor.future.onComplete {
-    case Success(result) => {
+    case Success(result) =>
       val DEV: String = "true"
       val conf: Config = ConfigFactory.load()
 
@@ -107,7 +107,7 @@ object TcpClient {
       if (confOnly) {
         new java.io.PrintWriter(file) {
           write(conf.atKey("akka").toString())
-          close
+          close()
         }
         system.terminate()
         log.warning("{} written", file)
@@ -121,11 +121,9 @@ object TcpClient {
           "client"
         )
       }
-    }
-    case Failure(err) => {
-      val msg = err.getMessage()
+    case Failure(err) =>
+      val msg = err.getMessage
       println("TcpClient startup failed: " + msg)
-    }
   }
 
   def stopTcpClient(): Unit = {
@@ -209,7 +207,7 @@ class Client(
             restartTcpOnFailure(remote)
           }
 
-        case default @ (_: Any) =>
+        case default @ _ =>
           log.warning(
             "Default: {} : {} -- {}" + default.getClass.getSimpleName,
             default,
@@ -229,8 +227,8 @@ class Client(
         system.actorOf(
           Client.props(
             new InetSocketAddress(
-              remote.getAddress().toString().substring(1),
-              remote.getPort()
+              remote.getAddress.toString.substring(1),
+              remote.getPort
             ),
             handler
           ),
@@ -247,7 +245,7 @@ class Client(
             )
           }
         }
-        case default @ (_: Any) =>
+        case default @ _ =>
           log.warning(
             "Default: {} : {}" + default.getClass.getSimpleName,
             default
@@ -262,7 +260,7 @@ class Client(
         Future.failed(
           new ConnectException(
             "Connection to Vertx Event Bus Failed: " + failCount
-          ).getCause()
+          ).getCause
         )
     }
   }

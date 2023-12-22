@@ -144,54 +144,54 @@ object CreateDML extends Enumeration {
 
 trait DbQueryBuilder {
   def getUserInsert(): String = {
-    CreateDML.USERINSERT.toString()
+    CreateDML.USERINSERT.toString
   }
 
   def getMessageInsert(): String = {
-    CreateDML.MESSAGEINSERT.toString()
+    CreateDML.MESSAGEINSERT.toString
   }
 
   def getSelectUser(): String = {
-    CreateDML.SELECTUSER.toString()
+    CreateDML.SELECTUSER.toString
   }
 
   def getSelectUndelivered(): String = {
-    CreateDML.SELECTUNDELIVERED.toString()
+    CreateDML.SELECTUNDELIVERED.toString
   }
 
   def getDeleteDelivered(): String = {
-    CreateDML.DELETEDELIVERED.toString()
+    CreateDML.DELETEDELIVERED.toString
   }
 
   def getDeleteUser(): String = {
-    CreateDML.DELETEUSER.toString()
+    CreateDML.DELETEUSER.toString
   }
 
   def getUpdateUser(): String = {
-    CreateDML.UPDATEUSER.toString()
+    CreateDML.UPDATEUSER.toString
   }
 
   def getSelectAllUsers(): String = {
-    CreateDML.SELECTALLUSERS.toString()
+    CreateDML.SELECTALLUSERS.toString
   }
 
   def getSelectUserByName(): String = {
-    CreateDML.SELECTUSERBYNAME.toString()
+    CreateDML.SELECTUSERBYNAME.toString
   }
 
   def setKeyspace(keyspace: String): Unit = {
-    CreateDML.keyspace = keyspace;
+    CreateDML.keyspace = keyspace
   }
 
   def getDodexLogin(): String = {
-    CreateDML.GETLOGIN.toString()
+    CreateDML.GETLOGIN.toString
   }
 
   def getInsertLogin(): String = {
-    CreateDML.LOGININSERT.toString()
+    CreateDML.LOGININSERT.toString
   }
 
   def getRemoveLogin(): String = {
-    CreateDML.REMOVELOGIN.toString()
+    CreateDML.REMOVELOGIN.toString
   }
 }

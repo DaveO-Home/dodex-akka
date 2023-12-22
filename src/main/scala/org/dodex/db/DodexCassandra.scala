@@ -87,7 +87,7 @@ object DodexCassandra {
               db = context.spawn(DodexCassandraDDL(), "setup-database")
               context.watch(db)
 
-              db ! new SetupKeyspace(context.self, cassandraSession)
+              db ! SetupKeyspace(context.self, cassandraSession)
 
             case NewSession =>
               val future: Future[Done] =
@@ -95,7 +95,7 @@ object DodexCassandra {
               future.onComplete {
                 case Success(Done) =>
                   cassandraSession = dodexCassandra.initCassandra()
-                  db ! new SetupTables(context.self, cassandraSession)
+                  db ! SetupTables(context.self, cassandraSession)
                 case Failure(exe) =>
                   throw new Exception(exe)
               }
@@ -138,7 +138,7 @@ object DodexCassandra {
 
   def startCassandraDatabase()(implicit ec: ExecutionContext): Unit = {
     val conf = ConfigFactory.load()
-    var dev: String = conf.getString("dev")
+    val dev: String = conf.getString("dev")
     if ("true".equals(dev)) {
       val databaseDirectory = new File("target/cassandra-db")
       var port: Int = 9042;
