@@ -2,36 +2,23 @@ package org.dodex
 
 import akka.Done
 import akka.actor.Actor
-import akka.actor.ActorLogging
-import akka.actor.ActorRef
-import akka.actor.ActorSystem
-import akka.actor.Cancellable
-import akka.actor.CoordinatedShutdown
-import akka.actor.typed.DeathPactException
-import akka.actor.Props
-import akka.actor.Terminated
-import akka.actor.UnhandledMessage
+import akka.actor.{ActorRef, ActorSystem, Cancellable, CoordinatedShutdown, Props, Terminated, UnhandledMessage}
 import akka.actor.typed.scaladsl.Behaviors
-import akka.io.IO
-import akka.io.Tcp
-import akka.io.Tcp.Register
+import akka.io.{IO, Tcp}
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
 import akka.util.ByteString
-import akka.util.Timeout
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import org.dodex.ex.Exchanger
+import com.typesafe.config.{Config, ConfigFactory}
+import org.dodex.ex.{Exchanger, MqttExchange}
+import scribe.format.{Formatter, classNameSimple, date, level, line, messages}
 
-import java.net.ConnectException
-import java.net.InetSocketAddress
-import java.util.concurrent.TimeUnit
-
-import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.concurrent.duration.DurationInt
-import scala.util.Failure
-import scala.util.Success
+import java.net.{ConnectException, InetSocketAddress}
 import scala.collection.immutable.Seq
+import scala.concurrent.{Future, Promise}
+import scala.util.{Failure, Success}
+import scribe.Logger
+import scribe.format.*
+
+import scala.compiletime.uninitialized
 
 abstract class Capsule
 case class SessionCassandra(
@@ -49,13 +36,18 @@ case class ReturnData(
 case object CloseSession extends Capsule
 
 object TcpClient {
-  val system = ActorSystem("actor-system")
-  var listener: ActorRef = null
-  var client: ActorRef = null
+  val system: ActorSystem = ActorSystem("actor-system")
+  private var mqttClient: ActorRef = uninitialized
   var confOnly = false
   var file = "./src/main/resources/application.json"
+  private var useMqtt: Boolean = false
   val waitFor: Promise[Null] = Promise[Null]()
-
+  private val dodexFormatter: Formatter = formatter"[$date] [$level] $classNameSimple:$line - $messages"
+  Logger.root
+    .clearHandlers()
+    .withHandler(formatter = dodexFormatter)
+    .replace()
+  var log: Logger = Logger("TcpClient")
   @main
   def TcpClientMain(args: String*): Any = {
     if (args != null) {
@@ -65,16 +57,17 @@ object TcpClient {
           argVal(0) match {
             case "conf" => confOnly = "true" == argVal(1)
             case "file" => file = argVal(1)
+            case "mqtt" => useMqtt = "true" == argVal(1)
             case _      =>
           }
       }
+
       waitFor completeWith Future { null }
     }
   }
 
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global
-  @volatile var log = system.log
 
   waitFor.future.onComplete {
     case Success(result) =>
@@ -90,15 +83,21 @@ object TcpClient {
         if (DEV == dev) conf.getInt("event.bus.dev.port")
         else conf.getInt("event.bus.port")
 
+      if(!useMqtt)
+        useMqtt = sys.env.getOrElse("USE_MQTT", "false") == "true"
+      if(!useMqtt)
+        useMqtt =
+          if (DEV == dev) conf.getBoolean("use.dev.mqtt")
+          else conf.getBoolean("use.mqtt")
+
       @volatile var can: Cancellable = null
 
       can = CoordinatedShutdown(system).addCancellableTask(
-        // CoordinatedShutdown.PhaseBeforeActorSystemTerminate,
         CoordinatedShutdown.PhaseBeforeServiceUnbind,
         "close"
       ) { () =>
         Future {
-          println("TcpClient Terminating System")
+          log.info("TcpClient Terminating System")
           can.cancel() // do only once
           Done
         }
@@ -106,27 +105,28 @@ object TcpClient {
       // Only saving the configuration for the "assembly" task (fat jar)
       if (confOnly) {
         new java.io.PrintWriter(file) {
-          write(conf.atKey("akka").toString())
+          write(conf.atKey("akka").toString)
           close()
         }
         system.terminate()
-        log.warning("{} written", file)
+        scribe.warn(s"$file written")
+      } else if (useMqtt) {
+        val exchange: ActorRef = system.actorOf(Props[MqttExchange](), "exchange")
+        mqttClient = system.actorOf(MqttClient.props(exchange), "mqttClient")
       } else {
         // Tcp client passes Cassandra work to listener
-        listener = system.actorOf(Props[Exchanger](), "listener")
-
+        val listener: ActorRef = system.actorOf(Props[Exchanger](), "listener")
         // Startup the Tcp Client
-        client = system.actorOf(
-          Client.props(new InetSocketAddress(host, port), listener),
-          "client"
+        val client = system.actorOf(
+          Client.props(new InetSocketAddress(host, port), listener), "client"
         )
       }
     case Failure(err) =>
       val msg = err.getMessage
-      println("TcpClient startup failed: " + msg)
+      log.info("TcpClient startup failed: " + msg)
   }
 
-  def stopTcpClient(): Unit = {
+  def stopTcpClient(client: ActorRef): Unit = {
     system.stop(client)
     Behaviors.stopped
   }
@@ -137,27 +137,28 @@ object Client {
       remote: InetSocketAddress,
       replies: ActorRef
   ): Props =
-    Props(classOf[Client], remote, replies)
+    Props(new Client(remote, replies))
 }
 
 class Client(
     remote: InetSocketAddress,
     listener: ActorRef
 ) extends Actor {
-  import Tcp._
-  import context.system
+  import Tcp.*
   import akka.pattern.retry
-  import scala.concurrent.duration._
-  import scala.language.postfixOps
+  import context.system
   import org.dodex.util.Limits
+  import scribe.Logger
+
+  import scala.concurrent.duration.*
+  import scala.language.postfixOps
 
   implicit val scheduler: akka.actor.Scheduler =
     system.classicSystem.scheduler
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global
   val handler: ActorRef = listener
-  @volatile var log = system.log
-  // val log = org.slf4j.LoggerFactory.getLogger("logging.service")
+  var log: Logger = Logger("Client")
   @volatile var failCount = 0
   @volatile var connected = false
   var connectLimit: Int = Limits.connectLimit // 3
@@ -180,7 +181,7 @@ class Client(
     case c @ Connected(remote, local) =>
       // Startup Vertx handshake and Cassandra
       listener ! c
-
+      log.info("Connected")
       // TCP ActorRef
       val connection = sender()
 
@@ -208,9 +209,9 @@ class Client(
           }
 
         case default @ _ =>
-          log.warning(
+          log.warn(
             "Default: {} : {} -- {}" + default.getClass.getSimpleName,
-            default,
+            default.toString,
             "waiting for Vertx to start"
           )
       }
@@ -220,10 +221,10 @@ class Client(
     if (failCount < Limits.connectLimit) {
       failCount += 1
       try {
-        println("FailCount=" + failCount)
+        log.info("FailCount=" + failCount)
 
-        TcpClient.stopTcpClient()
-        // TcpClientDodex.TcpClient().stopTcpClient()
+        TcpClient.stopTcpClient(self)
+
         system.actorOf(
           Client.props(
             new InetSocketAddress(
@@ -238,17 +239,16 @@ class Client(
         connected = true
         shuttingDown = false
       } catch {
-        case _: ConnectException => {
+        case _: ConnectException =>
           if (failCount == Limits.connectLimit) {
             Future.failed(
               new ConnectException("Connection to Vertx Event Bus Failed")
             )
           }
-        }
         case default @ _ =>
-          log.warning(
+          log.warn(
             "Default: {} : {}" + default.getClass.getSimpleName,
-            default
+            default.getMessage
           )
       }
       Future.failed(

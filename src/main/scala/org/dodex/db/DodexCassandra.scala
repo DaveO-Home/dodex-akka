@@ -1,52 +1,24 @@
 package org.dodex.db
 
-import java.io.File
-
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.util.Failure
-import scala.util.Success
-
 import akka.Done
-import akka.actor.ActorRef
-import akka.actor.Cancellable
-import akka.actor.CoordinatedShutdown
-import akka.actor.typed.ActorSystem
-import akka.actor.typed.Behavior
-import akka.actor.typed.DispatcherSelector
-import akka.actor.typed.PostStop
-import akka.actor.typed.Signal
-import akka.actor.typed.Terminated
-import akka.actor.typed.scaladsl.AbstractBehavior
-import akka.actor.typed.scaladsl.ActorContext
-import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.adapter._
-import akka.pattern.retry
-import akka.persistence.cassandra.testkit.CassandraLauncher
-import akka.stream.ActorMaterializer
-import akka.stream.Materializer
+import akka.actor.{ActorRef, Cancellable, CoordinatedShutdown}
+import akka.actor.typed.*
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.stream.alpakka.cassandra.CassandraSessionSettings
-import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
-import akka.stream.alpakka.cassandra.scaladsl.CassandraSessionRegistry
-import akka.stream.scaladsl.Sink
-import akka.stream.scaladsl.Source
+import akka.stream.alpakka.cassandra.scaladsl.{CassandraSession, CassandraSessionRegistry}
 import com.datastax.oss.driver.api.core.CqlSession
-import com.datastax.oss.driver.api.core.cql.Row
-import com.datastax.oss.driver.api.core.cql.SimpleStatement
-import com.datastax.oss.driver.api.core.cql._
-import com.datastax.oss.driver.api.core.metadata.Metadata
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import mjson.Json
-import org.dodex.Capsule
-import org.dodex.CloseSession
-import org.dodex.SessionCassandra
-import org.dodex.db.DbCassandra
-import org.dodex.ex.DodexData
-import org.dodex.ex.ShutDown
+import org.dodex.{Capsule, CloseSession, SessionCassandra}
+import org.dodex.ex.{DodexData, ShutDown}
 import org.dodex.util.Limits
-import org.modellwerkstatt.javaxbus._
+
+import java.io.File
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
+import scribe.Logger
+
+import scala.compiletime.uninitialized
 
 case object NewSession extends Capsule
 case object StopCreate extends Capsule
@@ -65,7 +37,8 @@ case class DodexDml(
 ) extends Capsule
 
 object DodexCassandra {
-  var cassandraSession: CassandraSession = null
+  var log: Logger = Logger("DodexCassandra")
+  var cassandraSession: CassandraSession = uninitialized
   def apply(): Behavior[Capsule] =
     Behaviors.setup[Capsule](context => {
       // implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
@@ -82,7 +55,7 @@ object DodexCassandra {
             case SessionCassandra(sender, session) => //sender @ (_:ActorRef) =>
               startCassandraDatabase()
               cassandraSession = dodexCassandra.initCassandra()
-              sender ! new SessionCassandra(sender, cassandraSession)
+              sender ! SessionCassandra(sender, cassandraSession)
 
               db = context.spawn(DodexCassandraDDL(), "setup-database")
               context.watch(db)
@@ -108,9 +81,9 @@ object DodexCassandra {
               if (dml != null) {
                 cassandraSession.underlying().onComplete {
                   case Success(cqlSession: CqlSession) =>
-                    if (cqlSession.isClosed())
+                    if (cqlSession.isClosed)
                       cassandraSession = dodexCassandra.initCassandra()
-                    dml ! new DodexDml(sender, json, cassandraSession)
+                    dml ! DodexDml(sender, json, cassandraSession)
                   case Failure(exe) =>
                     throw new Exception(exe)
                 }
@@ -125,23 +98,23 @@ object DodexCassandra {
               context.self ! CloseSession
               Behaviors.stopped
             case default @ (_: Any) =>
-              context.log.warn("Default: " + default.getClass.getSimpleName)
+              log.warn("Default: " + default.getClass.getSimpleName)
           }
           Behaviors.same
         }
         .receiveSignal {
           case (context, Terminated(ref)) =>
-            context.log.info("Actor '{}' finished & stopped", ref.path.name)
+            log.info("Actor " +  ref.path.name + " finished & stopped")
             Behaviors.same
         }
     })
 
-  def startCassandraDatabase()(implicit ec: ExecutionContext): Unit = {
+  private def startCassandraDatabase()(implicit ec: ExecutionContext): Unit = {
     val conf = ConfigFactory.load()
     val dev: String = conf.getString("dev")
     if ("true".equals(dev)) {
       val databaseDirectory = new File("target/cassandra-db")
-      var port: Int = 9042;
+      var port: Int = 9042
       var clean: Boolean = false
 
 //      CassandraLauncher.start(
@@ -156,13 +129,11 @@ object DodexCassandra {
 
 class DodexCassandra(context: ActorContext[Capsule])
     extends AbstractBehavior[Capsule](context) {
+  
+
   import scala.language.postfixOps
-
   val system: akka.actor.ActorSystem = akka.actor.ActorSystem()
-  // val log = org.slf4j.LoggerFactory.getLogger("logging.service")
-  // @volatile var log = context.log
-  var log = system.log
-
+  var log: Logger = Logger("DodexCassandra")
   // implicit val ec: ExecutionContext = system.classicSystem.getDispatcher
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global
@@ -214,7 +185,7 @@ class DodexCassandra(context: ActorContext[Capsule])
 
   override def onSignal: PartialFunction[Signal, Behavior[Capsule]] = {
     case PostStop =>
-      context.log.warn("Dodex Application stopped")
+      log.warn("Dodex Application stopped")
       this
   }
 }

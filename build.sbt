@@ -1,14 +1,16 @@
 name := "akka-dodex-scala"
 
-version := "2.0"
+resolvers += "Akka library repository".at("https://repo.akka.io/maven")
 
-scalaVersion := "3.3.1"
+version := "2.1.0"
 
-val AkkaVersion = "2.9.0-M2"
+scalaVersion := "3.4.2"
+
+val AkkaVersion = "2.9.4"
 val AkkaPersistenceCassandraVersion = "1.1.1"
 val AkkaHttpVersion = "10.5.3"
 val AkkaProjectionVersion = "1.1.0"
-lazy val akkaVersion = "2.9.0-M2"
+lazy val akkaVersion = "2.9.4"
 
 dependencyOverrides ++= Seq()
 libraryDependencies ++= Seq(
@@ -26,10 +28,20 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-tools" % AkkaVersion,
   "com.typesafe.akka" %% "akka-actor-testkit-typed" % AkkaVersion % Test,
   "com.lightbend.akka" %% "akka-projection-cassandra" % "1.5.0-M4",
-  "ch.qos.logback" % "logback-classic" % "1.2.3",
+  "com.lightbend.akka" %% "akka-stream-alpakka-mqtt" % "8.0.0",
+  "org.eclipse.paho" % "org.eclipse.paho.client.mqttv3" % "1.2.5",
+
+  "com.outr" %% "scribe" % "3.15.0",
+  "com.outr" %% "scribe-file" % "3.14.0",
+
+  "ch.qos.logback" % "logback-classic" % "1.5.6",
   "org.sharegov" % "mjson" % "1.4.1",
   "com.datastax.oss" % "java-driver-query-builder" % "4.17.0",
-  "org.scalatest" %% "scalatest" % "3.3.0-SNAP4" % Test
+  "org.scalatest" %% "scalatest" % "3.3.0-SNAP4" % Test,
+//  "com.typesafe.akka" % "akka-stream_3" % "2.9.3"
+
+//  https://repo.akka.io/maven/com/lightbend/akka/akka-stream-alpakka-mqtt_3/8.0.0/akka-stream-alpakka-mqtt_3-8.0.0.pom
+//  "com.typesafe.akka" %% "akka-stream-testkit" % AkkaVersion % Test
 
 // Libraries for the Github Embedded Cassandra
 //  "com.github.nosan" % "embedded-cassandra" % "4.0.7"
@@ -50,16 +62,16 @@ scalacOptions := Seq("-unchecked", "-deprecation")
 enablePlugins(JavaAppPackaging, GraalVMNativeImagePlugin)
 
 Compile / run / mainClass := Some("org.dodex.TcpClientMain") 
-Compile / packageBin / mainClass := Some("org.dodex.TcpClientMain") 
+Compile / packageBin / mainClass := Some("org.dodex.TcpClientMain")
 
-assemblyMergeStrategy in assembly := {   
-  case PathList("META-INF", xs @ _*) => MergeStrategy.discard   
+assembly / assemblyMergeStrategy := {
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case x => MergeStrategy.first 
 }
 // If using with "scala" e.g.  "scala akka-dodex-scala-assembly-1.0.jar"
 assembly / assemblyOption := (assembly / assemblyOption).value.copy(includeScala = false)
 assembly / assemblyMergeStrategy := {   
-  case PathList("META-INF", xs @ _*) => MergeStrategy.discard   
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case "reference.conf" => MergeStrategy.concat
   // case x => MergeStrategy.first
   case x =>

@@ -4,37 +4,27 @@
 
 package org.dodex.db
 
-import java.time.Instant
-
-import scala.collection.mutable
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.concurrent.duration._
-import scala.jdk.CollectionConverters._
-import scala.util.Failure
-import scala.util.Success
-
 import akka.Done
-import akka.actor.typed.ActorRef
+import akka.actor.ActorSystem
 import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.AbstractBehavior
-import akka.actor.typed.scaladsl.ActorContext
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+import scribe.Logger
+
+import java.time.Instant
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future, Promise}
+import scala.jdk.CollectionConverters.*
+import scala.util.{Failure, Success}
+
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
-import akka.stream.alpakka.cassandra.scaladsl.CassandraSource
 import akka.stream.scaladsl.Sink
-import com.datastax.oss.driver.api.core.cql.BoundStatement
-import com.datastax.oss.driver.api.core.cql.PreparedStatement
-import com.datastax.oss.driver.api.core.cql.Row
+import com.datastax.oss.driver.api.core.cql.{BoundStatement, PreparedStatement, Row}
 import mjson.Json
-import org.dodex.Capsule
-import org.dodex.ReturnData
-import org.dodex.db.DbQueryBuilder
+import org.dodex.{Capsule, ReturnData}
 
 object DodexCassandraDML {
-  import mjson.Json._;
+  import mjson.Json.*
 
+  var log: Logger = Logger("DodexCassandra")
   val keyspace: String = "dodex"
   
   def apply(): Behavior[Capsule] =
@@ -48,7 +38,7 @@ object DodexCassandraDML {
           case DodexDml(sender, json, cassandraSession) =>
             if (json == null || json.at("msg") == null) {
               // Send noop
-              context.log.info("noop")
+              log.info("noop")
             } else {
               val vertxJson: Json = json.at("msg")
               vertxJson.at("cmd").asString() match {
@@ -183,12 +173,16 @@ object DodexCassandraDML {
 class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
     extends AbstractBehavior[Capsule](context)
     with DbQueryBuilder {
+  import scribe.Logger
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global
   // val materializer =  akka.stream.Materializer.matFromSystem(
   //     /* missing */summon[akka.actor.ClassicActorSystemProvider])
   val system: akka.actor.ActorSystem = akka.actor.ActorSystem()
-  var log = system.log
+//  val log: LoggingAdapter = system.classicSystem.log
+//  val log = Logging(system, system.classicSystem.log)
+//  val log: LoggingAdapter = Logging(system.eventStream, "DodexCassandraDML")
+  val log: Logger = Logger("DodexCassandraDML")
 
   def selectUser(
       json: Json,
@@ -225,14 +219,14 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
     findPromise.future
   }
 
-  def getUser(
+  private def getUser(
       json: mjson.Json,
       cassandraSession: CassandraSession
   ): Future[mjson.Json] = {
     val jsonPayLoad: mjson.Json = Json.`object`;
     val selectUser: String = getSelectUser()
     val userPromise: Promise[Json] = Promise[Json]()
-    implicit val system = akka.actor.ActorSystem()
+    implicit val system: ActorSystem = akka.actor.ActorSystem()
     //    var users: Future[Seq[Row]] = CassandraSource(getSelectUser(),
     //      json.at("name").asString(), json.at("password").asString())
     //      .runWith(Sink.seq)
@@ -250,7 +244,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
         val userJson = Json.`object`
             userJson.set("name", data.getString("name"))
             userJson.set("password", data.getString("password"))
-            userJson.set("user_id", data.getUuid("user_id").toString())
+            userJson.set("user_id", data.getUuid("user_id").toString)
             userJson.set("ip", data.getString("ip"))
             userJson.set("last_login", data.getLong("last_login"))
 
@@ -269,8 +263,8 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       user: String,
       cassandraSession: CassandraSession
   ): Future[Row] = {
-//    implicit val materializer = context.classicActorContext.system
-    implicit val system = akka.actor.ActorSystem()
+    implicit val materializer: ExecutionContextExecutor = context.executionContext
+    implicit val system: ActorSystem = akka.actor.ActorSystem().classicSystem
     val selectUserByName: String = getSelectUserByName()
     val row: Future[Row] = cassandraSession
       .select(
@@ -321,7 +315,17 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
 
     futureUpdate.onComplete {
       case Success(Done) =>
-        updatePromise completeWith getUser(json, cassandraSession)
+        try {
+          updatePromise completeWith getUser(json, cassandraSession)
+        } catch {
+             case exception: Exception =>
+               log.error("Trying to complete Promise(May need to timeout, execute again): " + exception.getMessage)
+             case default@_ =>
+               log.warn(
+                 "Default: {} : {}" + default.getClass.getSimpleName,
+                 default
+               )
+           }
       case Failure(exe) =>
         throw new Exception(exe)
     }
@@ -363,8 +367,8 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       json: mjson.Json,
       cassandraSession: CassandraSession
   ): Future[mjson.Json] = {
-    implicit val system = akka.actor.ActorSystem()
-    var usersPromise: Promise[Json] = Promise[Json]()
+    implicit val system: ActorSystem = akka.actor.ActorSystem()
+    val usersPromise: Promise[Json] = Promise[Json]()
     val jsonPayLoad: mjson.Json = Json.`object`;
     val selectAllUsers: String = getSelectAllUsers()
     val user: String = json.at("name").asString()
@@ -401,7 +405,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       json: Json,
       cassandraSession: CassandraSession
   ): Future[Json] = {
-    var insertPromise: Promise[Json] = Promise[Json]()
+    val insertPromise: Promise[Json] = Promise[Json]()
     val users: List[Object] = json.at("users").asList().asScala.toList
 
     users.foreach {
@@ -458,7 +462,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       json: mjson.Json,
       cassandraSession: CassandraSession
   ): Future[mjson.Json] = {
-    implicit val system = akka.actor.ActorSystem()
+    implicit val system: ActorSystem = akka.actor.ActorSystem()
     val jsonPayLoad: mjson.Json = Json.`object`;
     val undeliveredMess: String = getSelectUndelivered()
     val userPromise: Promise[Json] = Promise[Json]()
@@ -480,7 +484,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
             val userJson = Json.`object`
             userJson.set("name", row.getString("name"))
             userJson.set("password", row.getString("password"))
-            userJson.set("messageid", row.getUuid("message_id").toString())
+            userJson.set("messageid", row.getUuid("message_id").toString)
             userJson.set("message", row.getString("message"))
             userJson.set("postdate", row.getLong("post_date"))
             userJson.set("fromhandle", row.getString("from_handle"))
@@ -529,7 +533,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
       json: mjson.Json,
       cassandraSession: CassandraSession
   ): Future[mjson.Json] = {
-    implicit val system = akka.actor.ActorSystem()
+    implicit val system: ActorSystem = akka.actor.ActorSystem()
     val jsonPayLoad: mjson.Json = Json.`object`;
     val getLogin: String = getDodexLogin()
     val loginPromise: Promise[Json] = Promise[Json]()
@@ -547,7 +551,7 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
 
         loginJson.set("name", row.getString("name"))
         loginJson.set("password", row.getString("password"))
-        loginJson.set("login_id", row.getUuid("login_id").toString())
+        loginJson.set("login_id", row.getUuid("login_id").toString)
         loginJson.set("last_login", row.getLong("last_login"))
         loginJson.set("status", "0")
         jsonPayLoad.set("msg", loginJson.getValue)
@@ -596,10 +600,9 @@ class DodexCassandraDML[Capsule](context: ActorContext[Capsule])
               json,
               cassandraSession
             ).onComplete {
-              case Success(result) => {
+              case Success(result) =>
                 result.set("status", "0")
                 insertPromise completeWith Future { result }
-              }
               case Failure(exe) =>
                 json.set("status", "-4")
                 insertPromise completeWith Future { json }

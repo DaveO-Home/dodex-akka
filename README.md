@@ -3,14 +3,14 @@
 ## Install Assumptions
 
 1. Java 17 or higher installed with JAVA_HOME set.
-2. Scala 3.3.1 and `sbt` installed.
+2. Scala 3.4.2 and `sbt` installed.
 3. Node/npm javascript package manager installed.
 4. Docker(to install a test Cassandra container) or installed Cassandra
 5. Optionally `cqlsh`
 
 ## Motivation and Summary
 
-A maiden voyage into the Scala, Akka and Cassandra world. The Akka client attaches to the Vertx Event Bus Bridge using TCP. Daniel Stieger's project @ <https://github.com/danielstieger/javaxbus> is used to communicate with the event bus on the Vertx Server. On the Akka side this code was converted to Scala and used to fomulate the message. The development/testing environment uses an embedded Cassandra database, so no install is required. However, an installed Cassendra can be used by changing the configuration in ``application.conf``. The asynchronous/reactive code is much like Vertx using Futures and Promises. Conclusion, Akka is a good place to start if you want to learn Scala and the Actor/Behavior pattern. The need for a Dodex database is simple so Cassandra usage barely scratches the surface.
+A maiden voyage into the Scala, Akka and Cassandra world. The Akka client attaches to the Vertx Event Bus Bridge using TCP. Daniel Stieger's project @ <https://github.com/danielstieger/javaxbus> is used to communicate with the event bus on the Vertx Server. On the Akka side this code was converted to Scala and used to fomulate the message. The development/testing environment uses either a __Cassandra container__ or an installed __networked Cassandra__. View and change the configuration in ``application.conf``. The asynchronous/reactive code is much like Vertx using Futures and Promises. Conclusion, Akka is a good place to start if you want to learn Scala and the Actor/Behavior pattern. The need for a Dodex database is simple so Cassandra usage barely scratches the surface.
 
 __Note;__ dodex-Akka can be run/developed on most platforms since __cqlsh__ is now supported with python 3.
 
@@ -37,17 +37,29 @@ __Note;__ dodex-Akka can be run/developed on most platforms since __cqlsh__ is n
 6. With both Vertx and Akka sevices running, execute url `http://localhost:8087/test` in a browser. To test that the `Akka` service is working, follow instructions for `Dodex-Mess`. If the message box displays `connected` you are good to go.  
    __Note:__ The Vertx service is started with `Cassandra` if the startup message `TCP Event Bus Bridge Started` is displayed.
 7. You can also run `http://localhost:8087/test/bootstrap.html` for a bootstrap example.
-8. Follow instructions for dodex at <https://www.npmjs.com/package/dodex-mess> and <https://www.npmjs.com/package/dodex-input>.
+8. Follow instructions for dodex at [dodex-mess](https://www.npmjs.com/package/dodex-mess>) and [dodex-input](https://www.npmjs.com/package/dodex-input).
+
+### Using the Vert.x Mqtt Broker and Akka Mqtt Client
+
+1. The order of precedence for starting Sbt in development mode to run the __Mqtt Client__.
+   *  Execute `sbt`,  `set run / fork := true`, `~run mqtt=true`
+   *  Execute `export USE_MQTT=true`, `sbt`, `set run / fork := true`, `~run`
+   *  In file __src/main/resources/application.conf__ set __use.dev.mqtt=true__, execute `sbt`, `set run / fork := true`, `~run`
+      *  For production use __use.mqtt=true__
+      *  The __TCP/Event Bus__ connection is default.
+      
+__Note:__ To start the __Vert.x Mqtt Broker__, see [dodex-vertx README](https://github.com/DaveO-Home/dodex-vertx/blob/master/README.md)
 
 ### Operation
 
 1. Starting in Dev Mode to test implementation; execute `sbt` and then  `run`. The `dodex-vertx` service should be running first, however if `dodex-akka` is started first, the Akka service will continue attempting the TCP handshake for a limited number of tries. This can be configured in `Limits.scala`. Conversely, if `dodex-vertx` is shutdown, the Akka client will continue with attempts to reconnect a limited number of times, frequency can also be configured.
 
 2. Starting in Dev Mode to develop; execute `sbt` to start the `sbt` shell  
-   __Note:__ This is only useful if an "Embedded" Cassandra is used
-    * execute `set run / fork := true`, this allows the embedded `Cassandra` database to terminate when shutting down with `ctrl-c`
+   __Note:__ These commands should work when changing `Akka` code.
+    * execute `set run / fork := true`, this allows the application to reload when shutting down with `ctrl-c`
     * execute `set run / javaOptions += "-Ddev=true"` for forked JVM and then execute `~run` to start
     * modify some `Akka` code and execute `ctrl-c`, while still in the `sbt shell` and using `~run` the `Akka` service will restart.
+    * When changing and restarting the `Vert.x` service, the `Akka` service should auto restart.
 
 3. Building a Production distribution - Review the `sbt` plugin documentation for details
     * Try `sbt stage` this will build a production setup without packaging.  You can execute by running `target/universal/stage/bin/akka-dodex-scala`. Make sure your production database is running.
@@ -58,8 +70,8 @@ __Note;__ dodex-Akka can be run/developed on most platforms since __cqlsh__ is n
       2. Jin must be installed in the `src` directory. The simplist method is to `cd src` and execute `git clone https://github.com/DaveO-Home/jin.git`.
       3. In the project directory where `GenFatJar` is located, execute `export WD=.`, `export CD=${PWD}/target/classes` and `mkdir target/classes`.
       4. Execute `./GenFatJar` to build the Fat Jar.
-      5. The generated jar should be `target/scala-3.3.1/akka-dodex-scala-assembly-2.0.jar`.
-      6. Execute `scala target/scala-3.3.1/akka-dodex-scala-assembly-2.0.jar` to startup production.
+      5. The generated jar should be `target/scala-3.4.2/akka-dodex-scala-assembly-2.0.jar`.
+      6. Execute `scala target/scala-3.4.2/akka-dodex-scala-assembly-2.0.jar` to startup production.
       7. Or using Java you can execute `./runUber`.
 
 ## Cassandra

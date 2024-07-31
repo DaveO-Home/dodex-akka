@@ -1,59 +1,46 @@
 package org.modellwerkstatt.javaxbus
 
 import mjson.Json
+import org.modellwerkstatt.javaxbus.EventBusRunnable.*
 
-import java.io._
-
-import java.net.ConnectException
-
-import java.net.SocketException
-
-import java.nio.channels.ClosedByInterruptException
-
-import java.nio.channels.ClosedChannelException
-
-import java.util.ArrayList
-
-import java.util.HashMap
-
-import java.util.List
-
+import java.io.*
 import java.lang.Thread.interrupted
-
-import EventBusRunnable._
-
-import scala.beans.{BeanProperty, BooleanBeanProperty}
-import scala.annotation.varargs
+import java.net.{ConnectException, SocketException}
+import java.nio.channels.{ClosedByInterruptException, ClosedChannelException}
+import java.util
+import java.util.{ArrayList, HashMap, List}
+import scala.beans.BooleanBeanProperty
+import scala.compiletime.uninitialized
 
 object EventBusRunnable {
 
-  val RECON_TIMEOUT: Int = 10000
+  private val RECON_TIMEOUT: Int = 10000
 
-  val FAST_RECON_TIMEOUT: Int = 500
+  private val FAST_RECON_TIMEOUT: Int = 500
 
-  val TEMP_HANDLER_SIGNATURE: String = "__MODWERK_HC__"
+  private val TEMP_HANDLER_SIGNATURE: String = "__MODWERK_HC__"
 
 }
 
 class EventBusRunnable extends Runnable {
 
-  private var hostname: String = _
+  private var hostname: String = uninitialized
 
-  private var port: Int = _
+  private var port: Int = uninitialized
 
-  private var io: IOSocketService = null
+  private var io: IOSocketService = uninitialized
 
   @BooleanBeanProperty
   var upNRunning: Boolean = false
 
   @volatile private var stillConnected: Boolean = false
 
-  private var proto: VertXProtoMJson = new VertXProtoMJson()
+  private val proto: VertXProtoMJson = new VertXProtoMJson()
 
-  private var consumerHandlers: HashMap[String, List[ConsumerHandler]] =
-    new HashMap[String, List[ConsumerHandler]]()
+  private val consumerHandlers: util.HashMap[String, util.List[ConsumerHandler]] =
+    new util.HashMap[String, util.List[ConsumerHandler]]()
 
-  private var errorHandler: List[ErrorHandler] = new ArrayList[ErrorHandler]()
+  private val errorHandler: util.List[ErrorHandler] = new util.ArrayList[ErrorHandler]()
 
   private var underTest: Boolean = false
 
@@ -82,9 +69,9 @@ class EventBusRunnable extends Runnable {
   ): Unit = {
     this.synchronized {
       if (!consumerHandlers.containsKey(adr)) {
-        consumerHandlers.put(adr, new ArrayList[ConsumerHandler]())
+        consumerHandlers.put(adr, new util.ArrayList[ConsumerHandler]())
       }
-      val listOfHandlers: List[ConsumerHandler] = consumerHandlers.get(adr)
+      val listOfHandlers: util.List[ConsumerHandler] = consumerHandlers.get(adr)
       listOfHandlers.add(handler)
       if (listOfHandlers.size == 1 && registerWithServer) {
         io.writeToStream(proto.register(adr))
@@ -97,7 +84,7 @@ class EventBusRunnable extends Runnable {
       if (!consumerHandlers.containsKey(adr)) {
         throw new IllegalStateException("No handlers registered for adr " + adr)
       }
-      val existingHandlers: List[ConsumerHandler] = consumerHandlers.get(adr)
+      val existingHandlers: util.List[ConsumerHandler] = consumerHandlers.get(adr)
       if (!existingHandlers.contains(handler)) {
         throw new IllegalStateException("Handler not registered for adr " + adr)
       }
@@ -138,7 +125,7 @@ class EventBusRunnable extends Runnable {
             " received."
         )
       }
-      val handlers: List[ConsumerHandler] = consumerHandlers.get(adr)
+      val handlers: util.List[ConsumerHandler] = consumerHandlers.get(adr)
       // pre Scala 2.13
       // for (h <- handlers) {
       //   h.handle(msg)
@@ -210,41 +197,35 @@ class EventBusRunnable extends Runnable {
     } else {
       tryReconnect()
     } catch {
-      case e: SocketException => {
+      case e: SocketException =>
         stillConnected = false
         if (upNRunning) {
           dispatchException(e)
         }
-      }
 
-      case e: ClosedByInterruptException => {
+      case e: ClosedByInterruptException =>
         stillConnected = false
         if (upNRunning) {
           dispatchException(e)
         }
-      }
 
-      case e: ClosedChannelException => {
+      case e: ClosedChannelException =>
         stillConnected = false
         if (upNRunning) {
           dispatchException(e)
         }
-      }
 
-      case e: EOFException => {
+      case e: EOFException =>
         stillConnected = false
         dispatchException(e)
-      }
 
-      case e: IOException => {
+      case e: IOException =>
         stillConnected = false
         dispatchException(e)
-      }
 
-      case e: Exception => {
+      case e: Exception =>
         stillConnected = false
         dispatchException(e)
-      }
 
     }
   }
@@ -272,10 +253,9 @@ class EventBusRunnable extends Runnable {
         }
       }
     } catch {
-      case e: IOException => {
+      case e: IOException =>
         stillConnected = false
         dispatchException(e)
-      }
 
       case e: RuntimeException =>
         if (
@@ -292,10 +272,9 @@ class EventBusRunnable extends Runnable {
       case e: InterruptedException =>
       // println(e.getMessage())
 
-      case e: Exception => {
+      case e: Exception =>
         stillConnected = false
         dispatchException(e)
-      }
 
     }
   }

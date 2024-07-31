@@ -1,31 +1,26 @@
 package org.dodex.ex
 
 import akka.actor.{Actor, ActorRef, Terminated, UnhandledMessage}
-import akka.io.Tcp
 import akka.stream.scaladsl.Sink
 import akka.util.ByteString
+import com.sandinh.paho.akka.{ByteArrayConverters, Message}
+import com.sandinh.paho.akka.ByteArrayConverters.RichByteArray
 import mjson.Json
 import org.dodex.{Capsule, ReturnData, SessionCassandra}
 import org.dodex.db.DodexCassandra
 import org.modellwerkstatt.javaxbus.VertXProtoMJson
 import scribe.Logger
 
-import java.net.InetSocketAddress
 import java.nio.{Buffer, ByteBuffer}
+import scala.compiletime.uninitialized
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-case class DodexData(
-    sender: akka.actor.ActorRef,
-    json: mjson.Json
-) extends Capsule
+case object ShutDownMqtt extends Capsule
 
-case object ShutDown extends Capsule
+class MqttExchange extends Actor {
 
-class Exchanger extends Actor {
-  import Tcp.*
   import context.system
-
   import scala.language.postfixOps
 
   private val proto: VertXProtoMJson = new VertXProtoMJson()
@@ -33,35 +28,25 @@ class Exchanger extends Actor {
     scala.concurrent.ExecutionContext.global
   private val dodexSystem =
     akka.actor.typed.ActorSystem[Capsule](DodexCassandra(), "dodex-system")
-  var parent: ActorRef = null
-  val log: Logger = Logger("Exchanger")
+  var parent: ActorRef = uninitialized
+  val log: Logger = Logger("MqttExchange")
 
-  def receive: PartialFunction[Any,Unit] = {
-    case Connected(remote: InetSocketAddress, local: InetSocketAddress) =>
-      log.warn(s"Connected to Vertx Event Bus $remote")
-      ping(sender())
-      vertxRegister(sender())
-      parent = sender()
-
+  def receive: PartialFunction[Any, Unit] = {
     case sessionCassandra @ (_: SessionCassandra) =>
       cassandraData(sessionCassandra)
 
-    case data: ByteString =>
-      if (data.slice(0, 20).utf8String.contains("pong")) {
-        startupCassandra()
-      }
-      // Vertx Event Bus uses first 4 bytes
+    case data: Message =>
       try {
-        val length = data.length - 4
-        val jsonString = data.takeRight(length).utf8String
-        val vertxJson: Json = Json.read(jsonString)
-        val body: Json = vertxJson.at("body")
+        val vertxJson: Json = Json.read(data.payload.getString)
+        val body: Json = vertxJson.at("msg")
+
+        log.debug(s"Body: $body")
 
         val message: mjson.Json =
           if (body != null)
             if (body.at("msg") != null)
               body.at("msg")
-            else 
+            else
               body
           else null
 
@@ -69,8 +54,10 @@ class Exchanger extends Actor {
           log.warn("Requested Command: " + message.at("cmd"))
         }
         // make json object compatible with dodex-vertx
-        val payload: Json =  if (body != null && body.at("msg") == null) 
-          Json.`object`().set("msg", body) else body
+        val payload: Json =
+          if (body != null && body.at("msg") == null)
+            Json.`object`().set("msg", body)
+          else body
         dodexSystem ! DodexData(self, payload)
       } catch {
         case e: Exception =>
@@ -78,24 +65,15 @@ class Exchanger extends Actor {
       }
     case returnData: ReturnData =>
       log.warn("Response Data Length: " + returnData.json.toString().length())
-
-      try {
-        val writeBuffer = getBuffer(
-          proto
-            .send("vertx", returnData.json, null)
-            .toString()
-            .getBytes("UTF-8")
-        )
-        parent ! ByteString.fromByteBuffer(writeBuffer)
-      } catch {
-        case e: Exception =>
-          e.printStackTrace()
-      }
+      parent ! returnData
+    case "start cassandra" =>
+      startupCassandra()
+      parent = sender()
     case "close" =>
       val writeBuffer =
         getBuffer(proto.unregister("akka").toString().getBytes("UTF-8"))
       sender() ! ByteString.fromByteBuffer(writeBuffer)
-    case "stop dodex"   => dodexSystem ! ShutDown
+    case "stop dodex"   => dodexSystem ! ShutDownMqtt
     case "write failed" => log.error("Write Failed")
     case "connection closed" =>
       log.warn("Connection Closed"); self ! "stop dodex"
@@ -106,27 +84,6 @@ class Exchanger extends Actor {
         default.toString,
         "waiting for Vertx to start"
       )
-  }
-
-  def ping(sender: ActorRef): Unit = {
-    val writeBuffer = getBuffer(proto.ping().toString().getBytes("UTF-8"))
-    sender ! ByteString.fromByteBuffer(writeBuffer)
-  }
-
-  private def vertxRegister(sender: ActorRef): Unit = {
-    var writeBuffer =
-      getBuffer(proto.register("akka").toString().getBytes("UTF-8"))
-
-    // Messaging (Akka service registration to Vertx Event Bus) back to Client for Tcp writing
-    sender ! ByteString.fromByteBuffer(writeBuffer)
-
-    val jsonPayLoad: Json =
-      Json.`object`().set("msg", "Akka Cassandra Ready").set("cmd", "string");
-    writeBuffer = getBuffer(
-      proto.send("vertx", jsonPayLoad, null).toString().getBytes("UTF-8")
-    )
-
-    sender ! ByteString.fromByteBuffer(writeBuffer)
   }
 
   private def startupCassandra(): Unit = {

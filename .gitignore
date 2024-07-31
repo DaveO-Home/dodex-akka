@@ -1,3 +1,14 @@
+drwxr-xr-x. 1 daveo daveo 154 Dec 20  2023 .bloop
+drwxr-xr-x. 1 daveo daveo  16 Dec 21  2023 .bsp
+drwxr-xr-x. 1 daveo daveo 204 Jul 29 07:53 .git
+-rw-r--r--. 1 daveo daveo 161 Jul 29 07:53 .gitignore
+drwxr-xr-x. 1 daveo daveo 246 Jul 28 14:16 .idea
+-rwxrwxr-x. 1 daveo daveo  32 Oct 20  2021 .jvmopts
+drwxr-xr-x. 1 daveo daveo 146 Jul  3 21:59 .metals
+-rw-r--r--. 1 daveo daveo  42 Dec 16  2023 .scalafmt.conf
+drwxr-xr-x. 1 daveo daveo  48 Oct 20  2021 .vscode
+GenCopy
+copyjs.sh
 out
 *.iml
 .idea
@@ -14,3 +25,5 @@ application.json
 deploy
 project/metals.sbt
 logs
+.vscode
+.bsp

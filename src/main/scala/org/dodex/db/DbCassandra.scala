@@ -113,7 +113,7 @@ trait DbCassandra {
       CreateTable.values.filter(sqlCmd => {
         if (
           sqlCmd
-            .toString()
+            .toString
             .toLowerCase()
             .contains(CreateTable.keyspace + "." + createValue)
         ) {
@@ -127,7 +127,7 @@ trait DbCassandra {
     sql
   }
 
-  def getCreateKeyspace(): String = {
+  def getCreateKeyspace: String = {
     CreateTable.CREATEKEYSPACE.toString
   }
 }

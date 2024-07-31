@@ -11,8 +11,9 @@
 package org.modellwerkstatt.javaxbus
 
 import mjson.Json
+import EventBus.*
 
-import EventBus._
+import scala.compiletime.uninitialized
 
 object EventBus {
 
@@ -30,9 +31,9 @@ object EventBus {
 
 class EventBus {
 
-  private var communicatorThread: Thread = _
+  private var communicatorThread: Thread = uninitialized
 
-  private var com: EventBusRunnable = _
+  private var com: EventBusRunnable = uninitialized
 
   def consumer(address: String, handler: ConsumerHandler): Unit = {
     if (com == null) {
@@ -83,7 +84,7 @@ class EventBus {
     com.sendToStream(true, adr, content, null)
   }
 
-  def isConnected(): Boolean = {
+  def isConnected: Boolean = {
     if (com == null) {
       // was not initialiized or maybe already closed...
       return false

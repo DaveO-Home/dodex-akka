@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.1.0](https://github.com/DaveO-Home/dodex-akka/tree/v2.0.0) (2024-07-30)
+
+[Full Changelog](https://github.com/DaveO-Home/dodex-akka/compare/v2.0.1...v2.1.0)
+
+* Upgraded : __Akka__(2.9.4), __Scala__(3.4.2), __Sbt__(1.9.7)
+* Implemented the __Akka__ Mqtt client to use with the __Vert.x__ Mqtt broker. Can replace the default __TCP/Event Bus__ connection.
+
 ## [v2.0.0](https://github.com/DaveO-Home/dodex-akka/tree/v2.0.0) (2023-12-21)
 
 [Full Changelog](https://github.com/DaveO-Home/dodex-akka/compare/v1.1.1...v2.0.0)

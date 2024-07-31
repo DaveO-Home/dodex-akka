@@ -2,25 +2,20 @@ package org.modellwerkstatt.javaxbus
 
 import mjson.Json
 
-import java.io.DataInputStream
-
-import java.io.DataOutputStream
-
-import java.io.IOException
-
+import java.io.{DataInputStream, DataOutputStream}
 import java.net.Socket
-
 import java.nio.charset.Charset
+import scala.compiletime.uninitialized
 
 class TraditionalSocketIO extends IOSocketService {
 
-  private var socket: Socket = _
+  private var socket: Socket = uninitialized
 
-  private var reader: DataInputStream = _
+  private var reader: DataInputStream = uninitialized
 
-  private var writer: DataOutputStream = _
+  private var writer: DataOutputStream = uninitialized
 
-  private var utf8Charset: Charset = Charset.forName("UTF-8")
+  private val utf8Charset: Charset = Charset.forName("UTF-8")
 
   def init(hostname: String, port: Int): Unit = {
     socket = new Socket(hostname, port)

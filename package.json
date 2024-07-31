@@ -1,6 +1,6 @@
 {
   "name": "dodex-akka",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "A scala asynchronous server for Dodex and Dodex-mess",
   "main": "index.js",
   "scripts": {
@@ -14,14 +14,13 @@
     "scala",
     "akka",
     "cassandra",
-    "reactive"
+    "reactive",
+    "mqtt"
   ],
   "author": "DaveO",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/DaveO-Home/dodex-akka/issues"
   },
-  "homepage": "https://github.com/DaveO-Home/dodex-akka#readme",
-  "dependencies": {
-  }
+  "homepage": "https://github.com/DaveO-Home/dodex-akka#readme"
 }

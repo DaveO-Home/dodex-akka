@@ -2,14 +2,6 @@ package org.modellwerkstatt.javaxbus
 
 import mjson.Json
 
-import java.io.DataInputStream
-
-import java.io.DataOutputStream
-
-import java.io.IOException
-
-import java.nio.charset.Charset
-
 class VertXProtoMJson {
 
   def send(adr: String, msg: Json, replyAddr: String): Json = {

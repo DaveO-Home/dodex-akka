@@ -12,7 +12,7 @@ import scala.util.Failure
 import scala.util.Success
 
 import akka.Done
-import akka.actor.testkit.typed.scaladsl.LogCapturing
+//import akka.actor.testkit.typed.scaladsl.LogCapturing
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import akka.actor.typed.scaladsl.adapter._
 import akka.persistence.cassandra.testkit.CassandraLauncher
@@ -29,10 +29,11 @@ import com.datastax.oss.driver.internal.core.cql.DefaultPreparedStatement
 import org.dodex.db.DbCassandra
 import org.dodex.db.DbQueryBuilder
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.MustMatchers._
+//import org.scalatest.MustMatchers._
 import org.scalatest._
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.wordspec.AnyWordSpecLike
+import scribe.Logger
 
 class CassandraSpec
     extends ScalaTestWithActorTestKit
@@ -50,23 +51,24 @@ class CassandraDodex
   var version: Future[String] = null
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global
-  implicit val system = akka.actor.ActorSystem()
+  val system = akka.actor.ActorSystem()
   var sessionSettings: CassandraSessionSettings = CassandraSessionSettings(
     "dodex-dev-with-akka-discovery"
   )
   var cassandraSession: CassandraSession = null
-
+  var log: Logger = Logger("CassandraDodex")
   override def beforeAll(): Unit = {
+    implicit val system = akka.actor.ActorSystem()
     val databaseDirectory = new File("target/cassandra-test-db")
-    var port: Int = 9048;
+    var port: Int = 9042;
     var clean: Boolean = true
 
-    CassandraLauncher.start(
-      databaseDirectory,
-      CassandraLauncher.DefaultTestConfigResource,
-      clean = clean,
-      port = port
-    )
+//    CassandraLauncher.start(
+//      databaseDirectory,
+//      CassandraLauncher.DefaultTestConfigResource,
+//      clean = clean,
+//      port = port
+//    )
     cassandraSession =
       CassandraSessionRegistry.get(system).sessionFor(sessionSettings)
     version = cassandraSession
@@ -85,7 +87,8 @@ class CassandraDodex
     Await.result(version, 5.seconds)
     version.onComplete {
       case Success(result) => {
-        system.log.info("The Cassandra Version: {}", result)
+
+        log.info("The Cassandra Version: {}", result)
         println(s"The Cassandra Version: $result")
         val floatResult: Float =
           result.substring(0, result.lastIndexOf(".")).toFloat
@@ -93,7 +96,7 @@ class CassandraDodex
       }
       case Failure(exe) => {
         val msg = exe.getMessage()
-        system.log.error(s"The Cassandra Version: $msg")
+        log.error(s"The Cassandra Version: $msg")
         throw new Exception(exe)
       }
     }
@@ -166,6 +169,7 @@ class CassandraDodex
   }
 
   test("select undelivered messages for user") {
+    implicit val system = akka.actor.ActorSystem()
     val selectUndelivered: String = getSelectUndelivered()
 
     var messages: Future[Seq[Row]] = cassandraSession
@@ -310,7 +314,7 @@ class CassandraDodex
       cassandraSession: CassandraSession
   ): Future[Done] = {
     val keyspace: Future[Done] = cassandraSession.executeDDL(
-      getCreateKeyspace()
+      getCreateKeyspace
     )
 
     keyspace.onComplete {

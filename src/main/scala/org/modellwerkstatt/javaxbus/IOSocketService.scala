@@ -2,8 +2,6 @@ package org.modellwerkstatt.javaxbus
 
 import mjson.Json
 
-import java.io.IOException
-
 trait IOSocketService {
 
   def init(hostname: String, port: Int): Unit

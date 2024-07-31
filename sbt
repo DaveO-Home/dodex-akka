@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-./sbt-dist/bin/sbt "$@"
+ ~/.sdkman/candidates/sbt/current/bin/sbt "$@"
+
+# ./sbt-dist/bin/sbt "$@"

@@ -5,25 +5,17 @@
 
 package org.dodex.db
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.util.Failure
-import scala.util.Success
-
 import akka.Done
-import akka.actor.typed.ActorRef
-import akka.actor.typed.Behavior
-import akka.actor.typed.DispatcherSelector
-import akka.actor.typed.scaladsl.AbstractBehavior
-import akka.actor.typed.scaladsl.ActorContext
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.stream.alpakka.cassandra.scaladsl.CassandraSession
 import com.datastax.oss.driver.api.core.CqlSession
 import com.typesafe.config.ConfigFactory
 import org.dodex.Capsule
-import org.dodex.db.DbCassandra
+
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.*
+import scala.util.{Failure, Success}
 
 object DodexCassandraDDL {
   val keyspace: String = "dodex"
@@ -34,7 +26,7 @@ object DodexCassandraDDL {
         scala.concurrent.ExecutionContext.global
       val dodexCassandraDDL = new DodexCassandraDDL(context)
 
-      Behaviors.receiveMessage { (message) =>
+      Behaviors.receiveMessage { message =>
         message match {
           case SetupKeyspace(sender, session) =>
             val underlying: Future[CqlSession] = session.underlying();
@@ -50,7 +42,7 @@ object DodexCassandraDDL {
                     case Success(Done) =>
                       // After creating keyspace, get new session to allow updated Metadata(refreshSchema?)
                       val conf = ConfigFactory.load()
-                      var dev: String = conf.getString("dev")
+                      val dev: String = conf.getString("dev")
                       if ("true".equals(dev)) {
                         sender.tell(NewSession)
                       } else {
@@ -87,17 +79,17 @@ object DodexCassandraDDL {
 class DodexCassandraDDL[Capsule](context: ActorContext[Capsule])
     extends AbstractBehavior[Capsule](context)
     with DbCassandra {
+  import scribe.Logger
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global
   val system: akka.actor.ActorSystem = akka.actor.ActorSystem()
-  var log = system.log
-
+  var log: Logger = Logger("DodexCassandraDDL")
   def setupKeyspace(
       keySpace: String,
       cassandraSession: CassandraSession
   ): Future[Done] = {
     val keyspace: Future[Done] = cassandraSession.executeDDL(
-      getCreateKeyspace()
+      getCreateKeyspace
     )
     keyspace
   }
@@ -135,7 +127,7 @@ class DodexCassandraDDL[Capsule](context: ActorContext[Capsule])
       val table = tables.next()
 
       if (!isTablePresent(keySpace, table, cqlSession)) {
-        log.info("Table Created: {}", table)
+        log.info(s"Table Created: $table")
         future = cassandraSession.executeDDL(getCreateTable(table))
       }
     }
@@ -144,9 +136,9 @@ class DodexCassandraDDL[Capsule](context: ActorContext[Capsule])
 
   def isKeyspacePresent(keySpace: String, cqlSession: CqlSession): Boolean = {
     val isPresent: Boolean = cqlSession
-      .getMetadata()
+      .getMetadata
       .getKeyspace(keySpace)
-      .isPresent()
+      .isPresent
     isPresent
   }
 
@@ -156,11 +148,11 @@ class DodexCassandraDDL[Capsule](context: ActorContext[Capsule])
       cqlSession: CqlSession
   ): Boolean = {
     val isPresent: Boolean = cqlSession
-      .getMetadata()
+      .getMetadata
       .getKeyspace(keySpace)
       .get()
       .getTable(table)
-      .isPresent()
+      .isPresent
     isPresent
   }
 

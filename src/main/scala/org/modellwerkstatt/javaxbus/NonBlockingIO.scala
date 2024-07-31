@@ -3,44 +3,37 @@ package org.modellwerkstatt.javaxbus
 import mjson.Json
 
 import java.io.EOFException
-
 import java.io.IOException
-
 import java.net.InetSocketAddress
-
 import java.net.SocketAddress
-
 import java.nio.ByteBuffer
-
 import java.nio.channels.SelectionKey
-
 import java.nio.channels.Selector
-
 import java.nio.channels.SocketChannel
-
 import java.nio.charset.Charset
+import NonBlockingIO.*
 
-import NonBlockingIO._
+import scala.compiletime.uninitialized
 
 object NonBlockingIO {
 
-  val DEFAULT_READ_BUFFER_SIZE: Int = 16000
+  private val DEFAULT_READ_BUFFER_SIZE: Int = 16000
 
 }
 
 class NonBlockingIO extends IOSocketService {
 
-  private var address: SocketAddress = _
+  private var address: SocketAddress = uninitialized
 
-  private var socketChannel: SocketChannel = _
+  private var socketChannel: SocketChannel = uninitialized
 
-  private var selector: Selector = _
+  private var selector: Selector = uninitialized
 
-  private var selectionKey: SelectionKey = _
+  private var selectionKey: SelectionKey = uninitialized
 
-  private var utf8Charset: Charset = Charset.forName("UTF-8")
+  private val utf8Charset: Charset = Charset.forName("UTF-8")
 
-  private var readBuffer: ByteBuffer = _
+  private var readBuffer: ByteBuffer = uninitialized
 
   override def init(hostname: String, port: Int): Unit = {
     readBuffer = ByteBuffer.allocate(DEFAULT_READ_BUFFER_SIZE)
@@ -76,21 +69,21 @@ class NonBlockingIO extends IOSocketService {
     val channelsRead: Int = selector.select()
     readBuffer.clear()
     readBuffer.limit(4)
-    while (readBuffer.hasRemaining())
+    while (readBuffer.hasRemaining)
       if (socketChannel.read(readBuffer) == -1)
         throw new EOFException("Socket closed, read returned -1")
     readBuffer.rewind()
     val length: Int = readBuffer.getInt
     readBuffer.clear()
     readBuffer.limit(length)
-    while (readBuffer.hasRemaining())
+    while (readBuffer.hasRemaining)
       if (socketChannel.read(readBuffer) == -1)
         throw new EOFException("Socket closed, read returned -1")
     readBuffer.flip()
     val bytesForString: Array[Byte] = Array.ofDim[Byte](length)
     readBuffer.get(bytesForString, 0, length)
     val jsonMsg: String = new String(bytesForString, "UTF-8")
-    System.err.println("<-- Message from Vertx: " + jsonMsg);
+    System.err.println("<-- Message from Vertx: " + jsonMsg)
     Json.read(jsonMsg)
   }
 
