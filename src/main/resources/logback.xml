@@ -30,10 +30,10 @@
         <appender-ref ref="FILE" />
     </appender>
 
-    <root level="INFO">
+    <root level="WARN">
         <appender-ref ref="ASYNC"/>
     </root>
-    <root level="INFO">
+    <root level="WARN">
         <appender-ref ref="ASYNC2"/>
     </root>
 
